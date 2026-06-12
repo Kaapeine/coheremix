@@ -6,7 +6,7 @@ from dataclasses import dataclass
 
 import numpy as np
 
-TARGET_SR = 48000
+from app.config import get_settings
 
 
 class DecodeError(Exception):
@@ -47,11 +47,16 @@ def probe(path: str, size: int) -> FileInfo:
     )
 
 
-def decode_to_48k(path: str) -> np.ndarray:
-    """Decode any supported file to float32 stereo PCM at 48 kHz, shape (2, n)."""
+def decode_to_48k(path: str, target_sr: int | None = None) -> np.ndarray:
+    """Decode any supported file to float32 stereo PCM, shape (2, n).
+
+    Resamples to ``target_sr`` (defaults to ``analysis_sample_rate`` from
+    config, currently 48 kHz).
+    """
+    sr = target_sr if target_sr is not None else get_settings().analysis_sample_rate
     proc = subprocess.run(
         ["ffmpeg", "-v", "error", "-i", path,
-         "-ac", "2", "-ar", str(TARGET_SR), "-f", "f32le", "-"],
+         "-ac", "2", "-ar", str(sr), "-f", "f32le", "-"],
         capture_output=True,
     )
     if proc.returncode != 0:
