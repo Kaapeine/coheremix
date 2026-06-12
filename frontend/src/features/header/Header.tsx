@@ -162,7 +162,7 @@ export function Header({ compId, mixPayload, refPayload, onSwapped }: Props) {
       >
         {(close) => (
           <div>
-            <div className="menu-label">Settings</div>
+            <div className="menu-label">Navigation</div>
             <div
               className="menu-item"
               onClick={() => {
@@ -170,7 +170,7 @@ export function Header({ compId, mixPayload, refPayload, onSwapped }: Props) {
                 navigate("/");
               }}
             >
-              New comparison…
+              ← Back to library
             </div>
           </div>
         )}

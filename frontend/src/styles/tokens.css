@@ -116,6 +116,8 @@ html, body {
 .header {
   display: flex; align-items: center; gap: 14px;
   padding: 0 14px;
+  height: var(--header-h);
+  flex-shrink: 0;
   min-width: 0; overflow: hidden;
   border-bottom: 1px solid var(--line);
   background: var(--surface-1);

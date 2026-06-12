@@ -75,27 +75,32 @@ const FRAG = `
       return;
     }
 
-    // Sample peak at this time
+    // Sample peak (clamp norm to avoid UV overrun at end of audio)
     float norm = clamp(t / uDuration, 0.0, 1.0 - 1.0 / uCount);
     float tx = (floor(norm * uCount) + 0.5) / uCount;
     vec4 s = texture2D(uPeaks, vec2(tx, 0.5));
-    // decode: 0..1 texel → -1..1 amplitude
     float pMin = s.r * 2.0 - 1.0;
     float pMax = s.g * 2.0 - 1.0;
 
-    // vUv.y: 0=bottom → -1, 1=top → +1
-    float amp = vUv.y * 2.0 - 1.0;
+    // 1-px gap between peak columns (only when columns are >=2 px wide)
+    float colsPerPx = uCount * uSecPerPx / uDuration;
+    if (colsPerPx < 0.5) {
+      float colFrac = fract(t / uDuration * uCount);
+      float halfGap = colsPerPx * 0.5;
+      if (colFrac < halfGap || colFrac > 1.0 - halfGap) {
+        gl_FragColor = vec4(0.0);
+        return;
+      }
+    }
 
+    // 10% vertical padding: bars never clip top/bottom canvas edge
+    float amp = (vUv.y * 2.0 - 1.0) * 1.25;
     if (amp < pMin || amp > pMax) {
       gl_FragColor = vec4(0.0);
       return;
     }
 
-    // Brighter toward the peak midline
-    float span = max(pMax - pMin, 0.001);
-    float mid = 1.0 - clamp(2.0 * abs(amp - (pMax + pMin) * 0.5) / span, 0.0, 1.0);
-    float alpha = 0.48 + mid * 0.32;
-    gl_FragColor = vec4(uColor * alpha, alpha);
+    gl_FragColor = vec4(uColor, 0.85);
   }
 `;
 

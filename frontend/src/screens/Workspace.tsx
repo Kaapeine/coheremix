@@ -25,10 +25,9 @@ export function Workspace() {
 
   const hydrate = useViewState((s) => s.hydrate);
 
-  const load = useCallback(async () => {
+  const load = useCallback(async (silent = false) => {
     if (!id) return;
-    setLoading(true);
-    setFailed(false);
+    if (!silent) { setLoading(true); setFailed(false); }
     try {
       const comp = await api.get(id);
       hydrate(id, comp.viewState);
@@ -40,14 +39,12 @@ export function Workspace() {
         setMixPayload(mix);
         setRefPayload(ref);
       } else if (comp.state === "failed") {
-        setFailed(true);
+        if (!silent) setFailed(true);
       }
-      // state === "processing" with no jobId: workspace stays empty, user
-      // can navigate back manually
     } catch {
-      setFailed(true);
+      if (!silent) setFailed(true);
     } finally {
-      setLoading(false);
+      if (!silent) setLoading(false);
     }
   }, [id, hydrate]);
 
@@ -112,7 +109,7 @@ export function Workspace() {
         compId={id}
         mixPayload={mixPayload}
         refPayload={refPayload}
-        onSwapped={load}
+        onSwapped={() => load(true)}
       />
 
       <div className="main">
