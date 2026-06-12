@@ -1,0 +1,24 @@
+[project]
+name = "coheremix-backend"
+version = "0.1.0"
+requires-python = ">=3.12"
+dependencies = [
+    "fastapi>=0.115",
+    "uvicorn[standard]>=0.34",
+    "sqlalchemy>=2.0",
+    "pydantic>=2.9",
+    "python-multipart>=0.0.12",
+    "numpy>=2.1",
+    "scipy>=1.14",
+    "pyloudnorm>=0.1.1",
+]
+
+[dependency-groups]
+dev = ["pytest>=8.3", "httpx>=0.27", "soundfile>=0.12"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-q"
+
+[tool.uv]
+package = false
