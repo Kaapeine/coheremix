@@ -3,7 +3,8 @@ __pycache__/
 *.pyc
 .venv/
 backend/.venv/
-backend/data/        # sqlite + storage at runtime
+# sqlite db + file storage at runtime
+backend/data/
 .pytest_cache/
 
 # Node
