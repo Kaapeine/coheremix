@@ -134,6 +134,11 @@ export class AudioEngine {
     else this.startPos = pos;
   }
 
+  /** Resume playback from the current internal position (set by seek or pause). */
+  resume() {
+    this.play(this.startPos);
+  }
+
   private stopSources() {
     for (const v of [this.mix, this.ref]) {
       if (v?.src) {
@@ -147,6 +152,11 @@ export class AudioEngine {
         v.src = null;
       }
     }
+  }
+
+  /** Call synchronously inside a user-gesture handler to unblock the AudioContext. */
+  touch() {
+    if (this.ctx?.state === "suspended") void this.ctx.resume();
   }
 
   dispose() {

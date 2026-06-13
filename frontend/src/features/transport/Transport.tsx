@@ -4,8 +4,10 @@ import { useViewState } from "../../store/viewState";
 import { ABBlock } from "./ABBlock";
 import { ControlRow } from "./ControlRow";
 import { Waveform } from "./Waveform";
+import { useAudioEngine } from "../audio/useAudioEngine";
 
 interface Props {
+  compId: string;
   mixPayload: TrackPayload;
   refPayload: TrackPayload;
 }
@@ -17,7 +19,7 @@ interface DragState {
   startOffset: number;
 }
 
-export function Transport({ mixPayload, refPayload }: Props) {
+export function Transport({ compId, mixPayload, refPayload }: Props) {
   // Full store ref — keeps mouse/keyboard handlers out of the re-render cycle.
   const store = useViewState();
   const storeRef = useRef(store);
@@ -39,6 +41,18 @@ export function Transport({ mixPayload, refPayload }: Props) {
     refPayload.meta.duration,
   );
 
+  const { touch, seekTo } = useAudioEngine({ compId, mix: mixPayload, ref: refPayload, playing, setPlaying });
+  const touchRef = useRef(touch);
+  touchRef.current = touch;
+  const seekToRef = useRef(seekTo);
+  seekToRef.current = seekTo;
+
+  // Wrap setPlaying so every play/pause gesture also unblocks the AudioContext.
+  const handleSetPlaying = (v: boolean) => {
+    touchRef.current();
+    setPlaying(v);
+  };
+
   // Sync duration into store once on mount / when payloads change.
   useEffect(() => {
     if (storeRef.current.duration !== duration) {
@@ -57,34 +71,6 @@ export function Transport({ mixPayload, refPayload }: Props) {
     return () => ro.disconnect();
   }, []);
 
-  // Playback rAF loop.
-  useEffect(() => {
-    if (!playing) return;
-    let last = performance.now();
-    let rafId: number;
-    const tick = (now: number) => {
-      const dt = Math.min(0.05, (now - last) / 1000);
-      last = now;
-      const s = storeRef.current;
-      let p = s.playhead + dt;
-      if (s.loop.enabled && s.regionA && p >= s.regionA[1]) p = s.regionA[0];
-      if (p >= s.duration) {
-        setPlaying(false);
-        s.set({ playhead: s.duration });
-        return;
-      }
-      // auto-follow scroll
-      const span = contentWRef.current * s.secPerPx;
-      let scroll = s.scroll;
-      if (p > s.scroll + span * 0.88) scroll = p - span * 0.5;
-      if (p < s.scroll) scroll = Math.max(0, p - span * 0.1);
-      s.set({ playhead: p, scroll });
-      rafId = requestAnimationFrame(tick);
-    };
-    rafId = requestAnimationFrame(tick);
-    return () => cancelAnimationFrame(rafId);
-  }, [playing]); // eslint-disable-line react-hooks/exhaustive-deps
-
   // Keyboard shortcuts.
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -92,7 +78,7 @@ export function Transport({ mixPayload, refPayload }: Props) {
       const s = storeRef.current;
       if (e.key === " ") {
         e.preventDefault();
-        setPlaying(!playingRef.current);
+        handleSetPlaying(!playingRef.current);
       } else if (e.key === "Tab") {
         e.preventDefault();
         s.set({ ab: s.ab === "A" ? "B" : "A" });
@@ -130,7 +116,11 @@ export function Transport({ mixPayload, refPayload }: Props) {
         });
       }
     };
-    const onUp = () => {
+    const onUp = (e: MouseEvent) => {
+      const drag = dragRef.current;
+      if (drag && drag.mode === "region" && Math.abs(e.clientX - drag.startX) < 4) {
+        seekToRef.current(drag.startTime);
+      }
       dragRef.current = null;
     };
     document.addEventListener("mousemove", onMove);
@@ -184,7 +174,7 @@ export function Transport({ mixPayload, refPayload }: Props) {
             role="mix"
             scroll={scroll}
             secPerPx={secPerPx}
-            duration={duration}
+            duration={mixPayload.meta.duration}
           />
         </div>
 
@@ -201,7 +191,7 @@ export function Transport({ mixPayload, refPayload }: Props) {
             role="reference"
             scroll={scroll}
             secPerPx={secPerPx}
-            duration={duration}
+            duration={refPayload.meta.duration}
             offsetPx={offsetPx}
           />
         </div>
@@ -219,7 +209,7 @@ export function Transport({ mixPayload, refPayload }: Props) {
       </div>
 
       {/* Column 2, Row 2: control row */}
-      <ControlRow playing={playing} setPlaying={setPlaying} />
+      <ControlRow playing={playing} setPlaying={handleSetPlaying} />
     </div>
   );
 }
