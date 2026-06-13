@@ -1,4 +1,3 @@
-import React from "react";
 import { Menu } from "../../components/Menu";
 import { Icon } from "../../components/Icon";
 import { useViewState } from "../../store/viewState";
@@ -66,7 +65,7 @@ function Panel({ id, idx, count, onChange, onMove, onClose }: PanelProps) {
       <div className="panel-head">
         <Menu
           width={210}
-          trigger={(open, toggle) => (
+          trigger={(_open, toggle) => (
             <button className="ptool" onClick={toggle} title="Change view" style={{ width: 22 }}>
               <Icon name="chevron" size={14} />
             </button>
@@ -139,7 +138,7 @@ export function PanelWorkspace() {
         <Menu
           align="right"
           width={210}
-          trigger={(open, toggle) => (
+          trigger={(_open, toggle) => (
             <button className="add-panel" onClick={toggle}>
               <Icon name="plus" size={12} />
               Add panel

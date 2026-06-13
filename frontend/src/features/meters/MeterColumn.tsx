@@ -1,4 +1,3 @@
-import React from "react";
 import { Menu } from "../../components/Menu";
 import { Icon } from "../../components/Icon";
 import { useViewState } from "../../store/viewState";
@@ -27,7 +26,7 @@ function MeterSlot({ id, taken, onChange }: MeterSlotProps) {
         <Menu
           align="right"
           width={180}
-          trigger={(open, toggle) => (
+          trigger={(_open, toggle) => (
             <button className="ptool" onClick={toggle} title="Change meter">
               <Icon name="chevron" size={14} />
             </button>

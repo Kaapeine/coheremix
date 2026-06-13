@@ -1,4 +1,3 @@
-import React from "react";
 import { Icon } from "../../components/Icon";
 import { Menu } from "../../components/Menu";
 import { useViewState, type MatchMode } from "../../store/viewState";
