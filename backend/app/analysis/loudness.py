@@ -45,3 +45,33 @@ def integrated_lufs(pcm: np.ndarray, sample_rate: int) -> float:
 def gain_match(integrated: float, target_lufs: float) -> float:
     """LU offset to bring this track to the common target."""
     return round(target_lufs - integrated, 2)
+
+
+_ABS_GATE = -70.0  # LUFS absolute gate
+_G = np.array([1.0, 1.0])  # channel weights (L, R equal)
+
+
+def block_loudness(msq_blocks: np.ndarray) -> np.ndarray:
+    """Per-block loudness L = -0.691 + 10*log10(sum_ch G_ch * msq_ch)."""
+    weighted = (msq_blocks * _G[: msq_blocks.shape[1]]).sum(axis=1)
+    with np.errstate(divide="ignore"):
+        return -0.691 + 10.0 * np.log10(weighted)
+
+
+def windowed_lufs(msq_blocks: np.ndarray, win_blocks: int) -> np.ndarray:
+    """Sliding-window LUFS over the block array (trailing window).
+
+    short-term = 30 blocks (3 s), momentary = 4 blocks (400 ms).
+    Output length == number of blocks; window clamps at the start.
+    """
+    n = msq_blocks.shape[0]
+    out = np.full(n, -120.0)
+    if n == 0:
+        return out
+    weighted = (msq_blocks * _G[: msq_blocks.shape[1]]).sum(axis=1)
+    csum = np.concatenate([[0.0], np.cumsum(weighted)])
+    for i in range(n):
+        lo = max(0, i - win_blocks + 1)
+        mean_pow = (csum[i + 1] - csum[lo]) / (i - lo + 1)
+        out[i] = -0.691 + 10.0 * np.log10(mean_pow) if mean_pow > 0 else -120.0
+    return out
