@@ -125,6 +125,20 @@ def get_payload(comp_id: str, role: str, db: OrmSession = Depends(get_db)):
     return Response(content=data, media_type="application/json")
 
 
+@router.get("/{comp_id}/tracks/{role}/audio")
+def get_audio(comp_id: str, role: str, db: OrmSession = Depends(get_db)):
+    comp = repo.get_comparison(db, comp_id)
+    if not comp:
+        raise HTTPException(404)
+    track = next((t for t in comp.tracks if t.role == role), None)
+    if not track or not track.upload_key:
+        raise HTTPException(404, "audio not available")
+    path = get_settings().storage_dir / track.upload_key
+    if not path.exists():
+        raise HTTPException(410, "audio expired")
+    return FileResponse(path, filename=path.name)
+
+
 @router.patch("/{comp_id}")
 def patch_comparison(comp_id: str, body: dict, db: OrmSession = Depends(get_db)):
     comp = repo.get_comparison(db, comp_id)
