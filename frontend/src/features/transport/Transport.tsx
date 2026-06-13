@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useLayoutEffect, useRef, useState } from "react";
 import type { TrackPayload } from "../../types/payload";
 import { useViewState } from "../../store/viewState";
 import { ABBlock } from "./ABBlock";
@@ -23,7 +23,7 @@ export function Transport({ compId, mixPayload, refPayload }: Props) {
   // Full store ref — keeps mouse/keyboard handlers out of the re-render cycle.
   const store = useViewState();
   const storeRef = useRef(store);
-  storeRef.current = store;
+  useLayoutEffect(() => { storeRef.current = store; });
 
   const waveRef = useRef<HTMLDivElement>(null);
   const contentWRef = useRef(900);
@@ -43,9 +43,11 @@ export function Transport({ compId, mixPayload, refPayload }: Props) {
 
   const { touch, seekTo } = useAudioEngine({ compId, mix: mixPayload, ref: refPayload, playing, setPlaying });
   const touchRef = useRef(touch);
-  touchRef.current = touch;
   const seekToRef = useRef(seekTo);
-  seekToRef.current = seekTo;
+  useLayoutEffect(() => {
+    touchRef.current = touch;
+    seekToRef.current = seekTo;
+  });
 
   // Wrap setPlaying so every play/pause gesture also unblocks the AudioContext.
   const handleSetPlaying = (v: boolean) => {
@@ -78,7 +80,10 @@ export function Transport({ compId, mixPayload, refPayload }: Props) {
       const s = storeRef.current;
       if (e.key === " ") {
         e.preventDefault();
-        handleSetPlaying(!playingRef.current);
+        touchRef.current();
+        const v = !playingRef.current;
+        playingRef.current = v;
+        _setPlaying(v);
       } else if (e.key === "Tab") {
         e.preventDefault();
         s.set({ ab: s.ab === "A" ? "B" : "A" });
@@ -94,7 +99,7 @@ export function Transport({ compId, mixPayload, refPayload }: Props) {
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  }, []);
 
   // Global mouse handlers for drag-region and drag-B.
   useEffect(() => {
@@ -129,7 +134,7 @@ export function Transport({ compId, mixPayload, refPayload }: Props) {
       document.removeEventListener("mousemove", onMove);
       document.removeEventListener("mouseup", onUp);
     };
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  }, []);
 
   const { scroll, secPerPx, playhead, regionA, offsetB } = store;
   const offsetPx = offsetB / secPerPx;

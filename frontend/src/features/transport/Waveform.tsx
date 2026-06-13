@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useLayoutEffect, useRef } from "react";
 import {
   createWaveformRenderer,
   type WaveformRenderer,
@@ -33,7 +33,7 @@ export function Waveform({
   // Keep latest draw params in a ref so the ResizeObserver can always draw
   // with fresh values without being a useEffect dependency itself.
   const paramsRef = useRef({ scroll, secPerPx, duration, color, offsetPx });
-  paramsRef.current = { scroll, secPerPx, duration, color, offsetPx };
+  useLayoutEffect(() => { paramsRef.current = { scroll, secPerPx, duration, color, offsetPx }; });
 
   const doDraw = () => {
     const r = rendererRef.current;
@@ -78,13 +78,13 @@ export function Waveform({
     });
     ro.observe(canvas);
     return () => ro.disconnect();
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  }, []);
 
   // Redraw whenever visible params change.
   useEffect(() => {
     const raf = requestAnimationFrame(doDraw);
     return () => cancelAnimationFrame(raf);
-  }, [scroll, secPerPx, duration, color, offsetPx, peaks]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [scroll, secPerPx, duration, color, offsetPx, peaks]);
 
   return (
     <canvas

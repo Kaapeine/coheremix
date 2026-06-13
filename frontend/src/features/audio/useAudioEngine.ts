@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useLayoutEffect, useRef } from "react";
 import { useViewState } from "../../store/viewState";
 import { api } from "../../api/client";
 import { AudioEngine } from "./engine";
@@ -23,11 +23,13 @@ export function useAudioEngine({ compId, mix, ref, playing, setPlaying }: Args):
   const engineRef = useRef<AudioEngine | null>(null);
   const readyRef = useRef(false);
   const playingRef = useRef(playing);
-  playingRef.current = playing;
-
   const store = useViewState();
   const storeRef = useRef(store);
-  storeRef.current = store;
+
+  useLayoutEffect(() => {
+    playingRef.current = playing;
+    storeRef.current = store;
+  });
 
   // Load buffers once per comparison.
   useEffect(() => {
@@ -62,7 +64,7 @@ export function useAudioEngine({ compId, mix, ref, playing, setPlaying }: Args):
       engine.dispose();
       engineRef.current = null;
     };
-  }, [compId, mix, ref]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [compId, mix, ref]);
 
   // Play / pause — resume from the engine's own internal position (set by seek).
   useEffect(() => {

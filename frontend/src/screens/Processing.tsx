@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { api } from "../api/client";
 import type { JobStatus } from "../types/payload";
@@ -97,7 +97,7 @@ export function ProcessingScreen({
   const [error, setError] = useState<string | null>(null);
   const [trackNames, setTrackNames] = useState<Record<string, string>>({});
   const onDoneRef = useRef(onDone);
-  onDoneRef.current = onDone;
+  useLayoutEffect(() => { onDoneRef.current = onDone; });
 
   useEffect(() => {
     api
