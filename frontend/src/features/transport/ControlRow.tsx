@@ -18,22 +18,32 @@ function fmtTime(s: number): string {
 interface Props {
   playing: boolean;
   setPlaying: (v: boolean) => void;
+  onRestart: () => void;
 }
 
-export function ControlRow({ playing, setPlaying }: Props) {
+export function ControlRow({ playing, setPlaying, onRestart }: Props) {
   const loop = useViewState((s) => s.loop);
-  const secPerPx = useViewState((s) => s.secPerPx);
   const linked = useViewState((s) => s.linked);
   const matchMode = useViewState((s) => s.matchMode);
   const playhead = useViewState((s) => s.playhead);
   const duration = useViewState((s) => s.duration);
   const set = useViewState((s) => s.set);
+  const zoomBy = useViewState((s) => s.zoomBy);
 
-  const zoomIn = () => set({ secPerPx: Math.max(0.004, secPerPx * 0.8) });
-  const zoomOut = () => set({ secPerPx: Math.min(0.5, secPerPx * 1.25) });
+  const zoomIn = () => zoomBy(0.8);
+  const zoomOut = () => zoomBy(1.25);
 
   return (
     <div className="control-row">
+      {/* back to start */}
+      <button
+        className="tbtn"
+        onClick={onRestart}
+        title="Back to start"
+      >
+        <Icon name="skipBack" size={14} />
+      </button>
+
       {/* play / pause */}
       <button
         className="tbtn play"

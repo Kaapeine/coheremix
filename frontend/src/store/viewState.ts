@@ -45,6 +45,8 @@ const lsKey = (id: string) => `coheremix:vs:${id}`;
 interface Store extends ViewState {
   comparisonId: string | null;
   set: (patch: Partial<ViewState>) => void;
+  /** Zoom by `factor` (<1 in, >1 out) keeping the playhead pinned to its pixel. */
+  zoomBy: (factor: number) => void;
   hydrate: (id: string, fromDb?: Record<string, unknown>) => void;
 }
 
@@ -56,6 +58,7 @@ export const useViewState = create<Store>((set, get) => ({
 
   set: (patch) => {
     set(patch as Partial<Store>);
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const { comparisonId, set: _s, hydrate: _h, ...vs } = get();
     if (comparisonId) {
       localStorage.setItem(lsKey(comparisonId), JSON.stringify(vs));
@@ -64,6 +67,14 @@ export const useViewState = create<Store>((set, get) => ({
         api.patch(comparisonId, { viewState: vs }).catch(() => {});
       }, 800);
     }
+  },
+
+  zoomBy: (factor) => {
+    const { secPerPx, scroll, playhead, offsetB, set: apply } = get();
+    const next = Math.min(0.5, Math.max(0.004, secPerPx * factor));
+    // Keep the playhead at the same screen x: (playhead - scroll)/secPerPx const.
+    const scrollNext = playhead - (playhead - scroll) * (next / secPerPx);
+    apply({ secPerPx: next, scroll: Math.max(Math.min(0, offsetB), scrollNext) });
   },
 
   hydrate: (id, fromDb) => {

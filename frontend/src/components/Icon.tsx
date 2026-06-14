@@ -9,6 +9,7 @@ const ICONS: Record<string, string> = {
   chevron:  "M5 7.5l5 5 5-5",
   x:        "M5 5l10 10M15 5L5 15",
   swap:     "M5 7h10l-2.5-2.5M15 13H5l2.5 2.5",
+  skipBack: "M6 4v12M15 5l-7 5 7 5z",
   help:     "M10 3a7 7 0 1 0 0 14 7 7 0 0 0 0-14zM8 8a2 2 0 1 1 2.6 1.9c-.6.2-.6.6-.6 1.1M10 14h.01",
   settings: "M3 5h14M3 10h14M3 15h14M7 3v4M13 8v4M10 13v4",
   up:       "M5 12l5-5 5 5",

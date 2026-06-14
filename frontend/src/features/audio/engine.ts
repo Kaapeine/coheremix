@@ -12,7 +12,8 @@ interface Voice {
 /**
  * Two buffers play in lock-step through per-voice gain nodes; muting the
  * inaudible voice gives instant, gain-matched A/B. B is positioned at
- * position + offsetB. Match-mode crossfades + frame-perfect loop are P4.
+ * position - offsetB (offsetB > 0 = B delayed). Match-mode crossfades +
+ * frame-perfect loop are P4.
  */
 export class AudioEngine {
   private ctx: AudioContext | null = null;
@@ -106,15 +107,26 @@ export class AudioEngine {
     if (this.ctx.state === "suspended") void this.ctx.resume();
     this.stopSources();
     const startVoice = (v: Voice, at: number) => {
+      const now = this.ctx!.currentTime;
+      // `at` past the buffer end → nothing to play.
+      if (at >= v.buffer.duration) return;
       const src = this.ctx!.createBufferSource();
       src.buffer = v.buffer;
       src.connect(v.gain);
-      const clamped = Math.max(0, Math.min(at, v.buffer.duration));
-      src.start(this.ctx!.currentTime, clamped);
+      if (at >= 0) {
+        src.start(now, at);
+      } else {
+        // B is delayed (positive offsetB): stay silent for -at seconds, then
+        // begin from its start. Clamping `at` to 0 here would instead play
+        // content-0 immediately — the "decoupled" bug.
+        src.start(now - at, 0);
+      }
       v.src = src;
     };
     startVoice(this.mix, pos);
-    startVoice(this.ref, pos + this.offsetB);
+    // offsetB > 0 means B is dragged right (delayed), matching the renderer and
+    // the align-drag: at A-time `pos` we play B's earlier content `pos - offsetB`.
+    startVoice(this.ref, pos - this.offsetB);
     this.startedAtCtx = this.ctx.currentTime;
     this.startPos = pos;
     this._playing = true;

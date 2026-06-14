@@ -3,6 +3,7 @@ import type { TrackPayload } from "../../types/payload";
 import { useViewState } from "../../store/viewState";
 import { ABBlock } from "./ABBlock";
 import { ControlRow } from "./ControlRow";
+import { ScrollBar } from "./ScrollBar";
 import { Waveform } from "./Waveform";
 import { useAudioEngine } from "../audio/useAudioEngine";
 
@@ -44,9 +45,16 @@ export function Transport({ compId, mixPayload, refPayload }: Props) {
   const { touch, seekTo } = useAudioEngine({ compId, mix: mixPayload, ref: refPayload, playing, setPlaying });
   const touchRef = useRef(touch);
   const seekToRef = useRef(seekTo);
+  // offsetB range that lets any part of ref line up with any part of mix:
+  // ref end → mix start = -refDur; ref start → mix end = +mixDur.
+  const offsetBoundsRef = useRef({ min: 0, max: 0 });
   useLayoutEffect(() => {
     touchRef.current = touch;
     seekToRef.current = seekTo;
+    offsetBoundsRef.current = {
+      min: -refPayload.meta.duration,
+      max: mixPayload.meta.duration,
+    };
   });
 
   // Wrap setPlaying so every play/pause gesture also unblocks the AudioContext.
@@ -92,9 +100,9 @@ export function Transport({ compId, mixPayload, refPayload }: Props) {
       } else if (e.key === "Escape") {
         s.set({ regionA: null });
       } else if (e.key === "+" || e.key === "=") {
-        s.set({ secPerPx: Math.max(0.004, s.secPerPx * 0.8) });
+        s.zoomBy(0.8);
       } else if (e.key === "-" || e.key === "_") {
-        s.set({ secPerPx: Math.min(0.5, s.secPerPx * 1.25) });
+        s.zoomBy(1.25);
       }
     };
     window.addEventListener("keydown", onKey);
@@ -116,14 +124,16 @@ export function Transport({ compId, mixPayload, refPayload }: Props) {
         if (t1 > t0) s.set({ regionA: [t0, t1] });
       } else {
         const deltaT = (e.clientX - drag.startX) * s.secPerPx;
+        const { min, max } = offsetBoundsRef.current;
         s.set({
-          offsetB: Math.max(-30, Math.min(30, drag.startOffset + deltaT)),
+          offsetB: Math.max(min, Math.min(max, drag.startOffset + deltaT)),
         });
       }
     };
     const onUp = (e: MouseEvent) => {
       const drag = dragRef.current;
-      if (drag && drag.mode === "region" && Math.abs(e.clientX - drag.startX) < 4) {
+      // A click (negligible movement) on either lane seeks to that A-time.
+      if (drag && Math.abs(e.clientX - drag.startX) < 4) {
         seekToRef.current(drag.startTime);
       }
       dragRef.current = null;
@@ -147,10 +157,14 @@ export function Transport({ compId, mixPayload, refPayload }: Props) {
   };
 
   const onBMouseDown = (e: React.MouseEvent) => {
+    if (!waveRef.current) return;
+    const rect = waveRef.current.getBoundingClientRect();
+    // Record the click's A-time so a plain click seeks (a drag instead aligns B).
+    const t = scroll + (e.clientX - rect.left) * secPerPx;
     dragRef.current = {
       mode: "alignB",
       startX: e.clientX,
-      startTime: 0,
+      startTime: t,
       startOffset: offsetB,
     };
   };
@@ -213,8 +227,21 @@ export function Transport({ compId, mixPayload, refPayload }: Props) {
         </div>
       </div>
 
-      {/* Column 2, Row 2: control row */}
-      <ControlRow playing={playing} setPlaying={handleSetPlaying} />
+      {/* Column 2, Row 2: horizontal scrollbar */}
+      <ScrollBar
+        mixDuration={mixPayload.meta.duration}
+        refDuration={refPayload.meta.duration}
+      />
+
+      {/* Column 2, Row 3: control row */}
+      <ControlRow
+        playing={playing}
+        setPlaying={handleSetPlaying}
+        onRestart={() => {
+          seekToRef.current(0);
+          storeRef.current.set({ scroll: 0 });
+        }}
+      />
     </div>
   );
 }
