@@ -58,6 +58,44 @@ def block_loudness(msq_blocks: np.ndarray) -> np.ndarray:
         return -0.691 + 10.0 * np.log10(weighted)
 
 
+def gated_integrated(msq_blocks: np.ndarray) -> float:
+    """BS.1770-4 two-pass gated integrated loudness over the given blocks.
+
+    Pass 1: drop blocks below -70 LUFS absolute; provisional mean power.
+    Pass 2: drop blocks below (provisional loudness - 10 LU); re-average.
+    Region-scoped integrated = call with that region's block slice.
+    """
+    if msq_blocks.shape[0] == 0:
+        return -120.0
+    weighted = (msq_blocks * _G[: msq_blocks.shape[1]]).sum(axis=1)
+    bl = -0.691 + 10.0 * np.log10(np.where(weighted > 0, weighted, 1e-12))
+    keep = bl >= _ABS_GATE
+    if not np.any(keep):
+        return -120.0
+    prov_pow = weighted[keep].mean()
+    prov_loud = -0.691 + 10.0 * np.log10(prov_pow)
+    rel = prov_loud - 10.0
+    keep2 = keep & (bl >= rel)
+    if not np.any(keep2):
+        return prov_loud
+    final_pow = weighted[keep2].mean()
+    return float(-0.691 + 10.0 * np.log10(final_pow))
+
+
+def loudness_range(shortterm: np.ndarray) -> float:
+    """EBU LRA: gate the short-term distribution (abs -70, then -20 LU below
+    the gated mean), take 95th - 10th percentile."""
+    st = shortterm[shortterm >= _ABS_GATE]
+    if st.size == 0:
+        return 0.0
+    rel = st.mean() - 20.0
+    st = st[st >= rel]
+    if st.size < 2:
+        return 0.0
+    p95, p10 = np.percentile(st, [95, 10])
+    return float(round(p95 - p10, 1))
+
+
 def windowed_lufs(msq_blocks: np.ndarray, win_blocks: int) -> np.ndarray:
     """Sliding-window LUFS over the block array (trailing window).
 
