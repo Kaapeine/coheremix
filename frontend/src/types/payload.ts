@@ -42,6 +42,8 @@ export interface ComparisonOut {
   createdAt: string;
   viewState: Record<string, unknown>;
   tracks: TrackSummary[];
+  jobId?: string | null; // latest job — lets the client resume polling after a refresh
+  error?: string | null; // latest job's error message when state === "failed"
 }
 
 export interface JobStatus {

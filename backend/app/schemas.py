@@ -79,6 +79,8 @@ class ComparisonOut(BaseModel):
     viewState: dict
     tracks: list[TrackSummary]
     defaults: ComparisonDefaults | None = None
+    jobId: str | None = None        # latest job — lets the client resume polling after a refresh
+    error: str | None = None        # latest job's error message when state == "failed"
 
 
 class JobStatus(BaseModel):

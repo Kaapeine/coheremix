@@ -256,9 +256,11 @@ export function UploadModal({ onClose }: { onClose: () => void }) {
     try {
       const mixFile = new File([a.file], a.name, { type: a.file.type });
       const refFile = new File([b.file], b.name, { type: b.file.type });
-      const { id, jobId } = await api.create(mixFile, refFile);
+      const { id } = await api.create(mixFile, refFile);
       onClose();
-      navigate(`/c/${id}`, { state: { jobId } });
+      // No router state needed — the workspace recovers the job from the
+      // comparison record, so this survives a hard refresh too.
+      navigate(`/c/${id}`);
     } catch (err) {
       setAnalyzeError(
         err instanceof Error ? err.message : "Upload failed — please try again",

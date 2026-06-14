@@ -18,12 +18,15 @@ router = APIRouter(prefix="/api/comparisons", tags=["comparisons"])
 
 
 def _comp_out(comp) -> dict:
+    latest_job = comp.jobs[-1] if comp.jobs else None  # jobs ordered by created_at
     return {
         "id": comp.id,
         "name": comp.name,
         "state": comp.state,
         "createdAt": comp.created_at.isoformat(),
         "viewState": comp.view_state or {},
+        "jobId": latest_job.id if latest_job else None,
+        "error": latest_job.error if latest_job else None,
         "tracks": [
             {
                 "role": t.role,
