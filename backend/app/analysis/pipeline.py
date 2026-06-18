@@ -2,14 +2,14 @@ from __future__ import annotations
 
 import json
 
-from app.analysis import decode, loudness, waveform
+from app.analysis import decode, features, loudness, waveform
 from app.config import get_settings
 from app.db.base import SessionLocal
 from app.db.models import Comparison, Job, Track
 from app.storage.local import get_storage
 
 P0_STAGES = ["decode", "gainmatch", "waveform"]
-ALL_STAGES = P0_STAGES + ["stft", "spatial", "aggregates"]
+ALL_STAGES = ["decode", "gainmatch", "loudness", "waveform"]
 
 
 def _set_stage(db, job: Job, role: str, stage: str, status: str) -> None:
@@ -24,7 +24,7 @@ def _set_stage(db, job: Job, role: str, stage: str, status: str) -> None:
     db.commit()
 
 
-def _pack_payload(track: Track, fileinfo, meta_dur, integrated, offset, peaks) -> bytes:
+def _pack_payload(track: Track, fileinfo, meta_dur, integrated, offset, peaks, sub1) -> bytes:
     payload = {
         "track": "user" if track.role == "mix" else "reference",
         "role": track.role,
@@ -37,11 +37,12 @@ def _pack_payload(track: Track, fileinfo, meta_dur, integrated, offset, peaks) -
         },
         "gainMatch": {"integratedLUFS": round(integrated, 2), "offsetToCommon": offset},
         "hop": 0.1,
-        "features": {},
+        "features": sub1["features"],
         "ltas": None,
         "spectrogram": None,
         "waveform": {"peaksByZoom": peaks},
-        "static": {},
+        "static": sub1["static"],
+        "kblocks": sub1["kblocks"],
     }
     return json.dumps(payload).encode()
 
@@ -84,10 +85,17 @@ def run_analysis(comp_id: str) -> None:
             tr.gain_match = {"integratedLUFS": round(integ, 2), "offsetToCommon": offset}
             _set_stage(db, job, tr.role, "gainmatch", "done")
 
+            current_stage = "loudness"
+            _set_stage(db, job, tr.role, "loudness", "running")
+            sub1 = features.compute_substrate1(
+                pcm, settings.analysis_sample_rate, integrated=integ, hop_s=0.1
+            )
+            _set_stage(db, job, tr.role, "loudness", "done")
+
             current_stage = "waveform"
             _set_stage(db, job, tr.role, "waveform", "running")
             peaks = waveform.build_peaks(pcm)
-            payload = _pack_payload(tr, info, dur, integ, offset, peaks)
+            payload = _pack_payload(tr, info, dur, integ, offset, peaks, sub1)
             key = f"payloads/{comp.id}/{tr.role}.json"
             storage.save(key, payload)
             tr.payload_key = key

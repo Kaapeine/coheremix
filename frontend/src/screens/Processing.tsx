@@ -6,13 +6,14 @@ import type { JobStatus } from "../types/payload";
 const STAGE_LABELS: Record<string, string> = {
   decode: "Decode",
   gainmatch: "Gain-match",
+  loudness: "Loudness",
   waveform: "Waveform",
   stft: "Frequency",
   spatial: "Stereo",
   aggregates: "Aggregates",
 };
 
-const STAGE_ORDER = ["decode", "gainmatch", "waveform", "stft", "spatial", "aggregates"];
+const STAGE_ORDER = ["decode", "gainmatch", "loudness", "waveform", "stft", "spatial", "aggregates"];
 
 function ProcTrack({
   role,
@@ -24,7 +25,7 @@ function ProcTrack({
   stages: Record<string, string>;
 }) {
   const roleClass = role === "mix" ? "a" : "b";
-  const entries = STAGE_ORDER.map((key) => ({
+  const entries = STAGE_ORDER.filter((key) => key in stages).map((key) => ({
     key,
     label: STAGE_LABELS[key] ?? key,
     status: stages[key] ?? "pending",
