@@ -3,8 +3,8 @@ from __future__ import annotations
 import numpy as np
 from scipy import signal
 
-_FFT = 4096
-_HOP = 1024  # 75% overlap
+_FFT = 16384
+_HOP = 4096  # 75% overlap
 _F_LO = 20.0
 _F_HI = 20000.0
 
@@ -26,14 +26,34 @@ def stft_mag(
     return freqs, frames
 
 
+def _octave_smooth(values: np.ndarray, bins: int, f_lo: float, f_hi: float, octave_width: float) -> np.ndarray:
+    """Smooth a per-bin power array with a triangular window `octave_width` octaves
+    wide (SPAN-style "1/3-octave smoothing"), constant in log-frequency space."""
+    if octave_width <= 0:
+        return values
+    oct_per_bin = np.log2(f_hi / f_lo) / bins
+    radius_oct = octave_width / 2.0
+    radius_bins = radius_oct / oct_per_bin
+    k = max(1, int(np.ceil(radius_bins)))
+    offsets = np.arange(-k, k + 1)
+    weights = np.maximum(0.0, 1.0 - np.abs(offsets) * oct_per_bin / radius_oct)
+    out = np.empty(bins)
+    for i in range(bins):
+        idx = np.clip(i + offsets, 0, bins - 1)
+        out[i] = np.average(values[idx], weights=weights)
+    return out
+
+
 def ltas(
     freqs: np.ndarray, frames: np.ndarray, bins: int = 96,
-    f_lo: float = _F_LO, f_hi: float = _F_HI,
+    f_lo: float = _F_LO, f_hi: float = _F_HI, smooth_octave: float = 1.0 / 3,
 ) -> dict:
     """Long-term average spectrum on a log-freq grid, in dB, peak-normalised to 0.
 
     Peak-normalisation means the curve describes tonal *shape* (apples-to-apples
-    after gain-match), not absolute level.
+    after gain-match), not absolute level. `smooth_octave` applies a SPAN-style
+    fractional-octave smoothing window (in the power domain, before dB/peak-norm)
+    so the curve reads as a tonal envelope rather than raw per-bin noise.
     """
     edges = np.geomspace(f_lo, f_hi, bins + 1)
     centers = np.sqrt(edges[:-1] * edges[1:])
@@ -43,14 +63,17 @@ def ltas(
             "db": [-120.0] * bins, "bins": bins,
         }
     mean_pow = (frames ** 2).mean(axis=0)  # mean power per FFT bin
-    db = np.empty(bins)
+    band_pow = np.empty(bins)
     for i in range(bins):
         sel = (freqs >= edges[i]) & (freqs < edges[i + 1])
         if np.any(sel):
-            p = mean_pow[sel].mean()
+            band_pow[i] = mean_pow[sel].mean()
         else:  # log band narrower than FFT resolution (low end): nearest bin
-            p = mean_pow[int(np.argmin(np.abs(freqs - centers[i])))]
-        db[i] = 10.0 * np.log10(p) if p > 0 else -120.0
+            band_pow[i] = mean_pow[int(np.argmin(np.abs(freqs - centers[i])))]
+    band_pow = _octave_smooth(band_pow, bins, f_lo, f_hi, smooth_octave)
+    db = np.full(bins, -120.0)
+    pos = band_pow > 0
+    db[pos] = 10.0 * np.log10(band_pow[pos])
     db = db - db.max()
     return {
         "freqs": [round(float(f), 1) for f in centers],

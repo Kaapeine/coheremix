@@ -135,3 +135,64 @@ export function valueLane(canvas: HTMLCanvasElement, A: TrackPayload, B: TrackPa
   };
   draw(A, 0, a); draw(B, view.offsetB, b);
 }
+
+const F_LO = 20, F_HI = 20000;
+
+/** Map a frequency (Hz) to an x pixel on a log scale within [padL, w). */
+function logFreqX(f: number, padL: number, w: number): number {
+  const r = (Math.log10(f) - Math.log10(F_LO)) / (Math.log10(F_HI) - Math.log10(F_LO));
+  return padL + r * (w - padL);
+}
+
+/** LTAS tonal-balance curve: log-freq x-axis, peak-normalised dB y-axis. */
+export function ltasCurve(canvas: HTMLCanvasElement, A: TrackPayload, B: TrackPayload) {
+  const s = setup(canvas); if (!s.ok) return; const { ctx, w, h } = s;
+  const a = css("--a"), b = css("--b"), line = "rgba(255,255,255,0.06)", tx3 = css("--tx-3");
+  const padL = 30;
+  const dbLo = -54, dbHi = 6;
+  const yOf = (db: number) => h - ((db - dbLo) / (dbHi - dbLo)) * h;
+  ctx.font = '9px "JetBrains Mono", monospace';
+  // horizontal dB gridlines
+  for (let db = 0; db >= -48; db -= 12) {
+    const y = yOf(db);
+    ctx.strokeStyle = line; ctx.beginPath(); ctx.moveTo(padL, y + 0.5); ctx.lineTo(w, y + 0.5); ctx.stroke();
+    ctx.fillStyle = tx3; ctx.fillText(`${db}`, 4, y + 3);
+  }
+  // vertical decade gridlines + labels
+  for (const f of [100, 1000, 10000]) {
+    const x = logFreqX(f, padL, w);
+    ctx.strokeStyle = line; ctx.beginPath(); ctx.moveTo(x + 0.5, 0); ctx.lineTo(x + 0.5, h - 12); ctx.stroke();
+    ctx.fillStyle = tx3; ctx.fillText(f >= 1000 ? `${f / 1000}k` : `${f}`, x + 3, h - 3);
+  }
+  // minor gridlines between decades (20..90, 200..900, 2000..9000), labels on a subset only
+  const minorLine = "rgba(255,255,255,0.03)";
+  const labeled = new Set([20, 30, 40, 60, 80, 200, 300, 400, 600, 800, 2000, 3000, 4000, 6000, 8000]);
+  for (const decade of [10, 100, 1000]) {
+    for (let m = 2; m <= 9; m++) {
+      const f = decade * m;
+      if (f < F_LO || f >= F_HI) continue;
+      const x = logFreqX(f, padL, w);
+      ctx.strokeStyle = minorLine; ctx.beginPath(); ctx.moveTo(x + 0.5, 0); ctx.lineTo(x + 0.5, h - 12); ctx.stroke();
+      if (labeled.has(f)) {
+        ctx.fillStyle = tx3; ctx.fillText(f >= 1000 ? `${f / 1000}k` : `${f}`, x + 3, h - 3);
+      }
+    }
+  }
+  // label the right edge (20k = F_HI)
+  ctx.fillStyle = tx3; ctx.fillText("20k", w - 22, h - 3);
+  const drawCurve = (track: TrackPayload, color: string) => {
+    const l = track.ltas; if (!l) return;
+    const NO_INFO_DB = -60; // trailing high-freq bins this far down are "no signal" (e.g. MP3 cutoff), not tonal content
+    let last = l.freqs.length - 1;
+    while (last > 0 && l.db[last] <= NO_INFO_DB) last--;
+    ctx.beginPath();
+    for (let i = 0; i <= last; i++) {
+      const x = logFreqX(l.freqs[i], padL, w);
+      const y = yOf(Math.max(dbLo, l.db[i]));
+      if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+    }
+    ctx.strokeStyle = color; ctx.globalAlpha = 0.95; ctx.lineWidth = 1.6; ctx.lineJoin = "round"; ctx.stroke();
+    ctx.globalAlpha = 1;
+  };
+  drawCurve(A, a); drawCurve(B, b);
+}

@@ -4,13 +4,13 @@ import { Icon } from "../../components/Icon";
 import { useViewState } from "../../store/viewState";
 import type { TrackPayload } from "../../types/payload";
 import {
-  ShortTermLufsBody, CrestBody, TilesBody, SummaryBody, PlaceholderBody, TimeOverlay,
+  ShortTermLufsBody, CrestBody, TilesBody, SummaryBody, LtasBody, PlaceholderBody, TimeOverlay,
 } from "./bodies";
 
 const VIEWS: Record<string, { title: string; sub: string; family: string; kind: string; h: number | null }> = {
   shortTermLufs: { title: "Short-term LUFS", sub: "loudness · section-feel", family: "Loudness", kind: "time", h: 188 },
   crest:         { title: "Crest factor", sub: "where it's being limited", family: "Loudness", kind: "time", h: 168 },
-  ltas:          { title: "LTAS — tonal balance", sub: "long-term average spectrum", family: "Frequency", kind: "soon", h: null },
+  ltas:          { title: "LTAS — tonal balance", sub: "long-term average spectrum", family: "Frequency", kind: "freq", h: 200 },
   liveSpectrum:  { title: "Live spectrum", sub: "frame at playhead", family: "Frequency", kind: "soon", h: null },
   bandDelta:     { title: "Band-energy delta", sub: "A relative to B", family: "Frequency", kind: "soon", h: null },
   correlation:   { title: "Phase correlation", sub: "mono-compatibility", family: "Stereo", kind: "soon", h: null },
@@ -21,7 +21,7 @@ const VIEWS: Record<string, { title: string; sub: string; family: string; kind: 
 };
 
 const PHASE_FOR: Record<string, string> = {
-  ltas: "Phase 2", liveSpectrum: "Phase 2", bandDelta: "Phase 2",
+  liveSpectrum: "Phase 2", bandDelta: "Phase 2",
   correlation: "Phase 3", goniometer: "Phase 3", spectrogram: "Phase 5",
 };
 
@@ -84,6 +84,8 @@ function Panel({ id, idx, count, mix, ref, onChange, onMove, onClose }: PanelPro
     body = <TilesBody mix={mix} ref={ref} />;
   } else if (id === "summary") {
     body = <SummaryBody mix={mix} ref={ref} />;
+  } else if (id === "ltas") {
+    body = <LtasBody mix={mix} ref={ref} />;
   } else {
     body = <PlaceholderBody title={v.title} phase={PHASE_FOR[id] ?? "a later phase"} />;
   }

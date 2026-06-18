@@ -4,7 +4,7 @@
 import type { TrackPayload } from "../../types/payload";
 import { useViewState } from "../../store/viewState";
 import { useCanvasDraw } from "./useCanvasDraw";
-import { lufsLane, valueLane } from "./draw";
+import { lufsLane, valueLane, ltasCurve } from "./draw";
 import * as R from "../analysis/read";
 
 const GUTTER = 64;
@@ -49,6 +49,11 @@ export function CrestBody({ mix, ref }: BodyProps) {
       }),
     [secPerPx, scroll, offsetB, mix, ref],
   );
+  return <canvas ref={cref} style={{ width: "100%", height: "100%", display: "block" }} />;
+}
+
+export function LtasBody({ mix, ref }: BodyProps) {
+  const cref = useCanvasDraw((cv) => ltasCurve(cv, mix, ref), [mix, ref]);
   return <canvas ref={cref} style={{ width: "100%", height: "100%", display: "block" }} />;
 }
 
