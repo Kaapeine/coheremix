@@ -59,3 +59,22 @@ def test_lra_positive_for_dynamic_signal():
     st = loudness.windowed_lufs(blocks, win_blocks=30)
     lra = loudness.loudness_range(st)
     assert lra > 3.0  # clear quiet->loud spread
+
+
+def test_compute_substrate1_payload_shape():
+    sr = 48000
+    pcm = _sine(sr, 3.0, 1000.0, 0.4)
+    from app.analysis import features
+
+    out = features.compute_substrate1(pcm, sr, integrated=-14.0, hop_s=0.1)
+    f = out["features"]
+    expected_len = int(3.0 / 0.1)
+    for key in ("shortTermLUFS", "momentaryLUFS", "crest", "truePeak"):
+        assert key in f
+        assert abs(len(f[key]) - expected_len) <= 1
+    st = out["static"]
+    for key in ("integrated", "lra", "truePeakMax", "plr", "crestAvg"):
+        assert key in st
+    # K-power blocks shipped for client-side region gating
+    assert "kblocks" in out and len(out["kblocks"]) >= 1
+    assert len(out["kblocks"][0]) == 2  # per-channel msq
