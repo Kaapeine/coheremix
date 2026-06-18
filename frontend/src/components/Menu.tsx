@@ -13,6 +13,7 @@ interface Coords {
   top: number | null;
   bottom: number | null;
   width?: number;
+  maxHeight: number;
 }
 
 interface Props {
@@ -36,6 +37,7 @@ export function Menu({ trigger, children, align = "left", width }: Props) {
     const vh = window.innerHeight;
     const spaceBelow = vh - r.bottom;
     const dropUp = spaceBelow < 250 && r.top > spaceBelow;
+    const margin = 13; // 5px gap + 8px screen padding
     setCoords({
       left:
         align === "right"
@@ -44,6 +46,7 @@ export function Menu({ trigger, children, align = "left", width }: Props) {
       top: dropUp ? null : r.bottom + 5,
       bottom: dropUp ? vh - r.top + 5 : null,
       width,
+      maxHeight: Math.max(120, (dropUp ? r.top : spaceBelow) - margin),
     });
   }, [align, width]);
 
@@ -87,6 +90,8 @@ export function Menu({ trigger, children, align = "left", width }: Props) {
               top: coords.top ?? undefined,
               bottom: coords.bottom ?? undefined,
               width: coords.width,
+              maxHeight: coords.maxHeight,
+              overflowY: "auto",
             }}
           >
             {typeof children === "function" ? children(close) : children}
