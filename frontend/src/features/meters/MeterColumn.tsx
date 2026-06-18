@@ -2,6 +2,7 @@ import { Menu } from "../../components/Menu";
 import { Icon } from "../../components/Icon";
 import { useViewState } from "../../store/viewState";
 import type { TrackPayload } from "../../types/payload";
+import { LufsMeter, TruePeakMeter, MeterPlaceholder } from "./meters";
 
 const METERS: Record<string, string> = {
   lufs: "LUFS",
@@ -20,7 +21,7 @@ interface MeterSlotProps {
   onChange: (k: string) => void;
 }
 
-function MeterSlot({ id, taken, onChange }: MeterSlotProps) {
+function MeterSlot({ id, taken, mix, ref, onChange }: MeterSlotProps) {
   return (
     <div className="meter-slot">
       <div className="meter-head">
@@ -62,9 +63,18 @@ function MeterSlot({ id, taken, onChange }: MeterSlotProps) {
         </Menu>
       </div>
       <div className="meter-body">
-        <div className="empty-slot" style={{ fontSize: 11, color: "var(--tx-3)" }}>
-          No data yet — loudness lands in Phase 1
-        </div>
+        {!mix || !ref ? (
+          <MeterPlaceholder title={METERS[id]} phase="analysis" />
+        ) : id === "lufs" ? (
+          <LufsMeter mix={mix} ref={ref} />
+        ) : id === "truepeak" ? (
+          <TruePeakMeter mix={mix} ref={ref} />
+        ) : (
+          <MeterPlaceholder
+            title={METERS[id]}
+            phase={id === "correlation" || id === "balance" ? "Phase 3" : "a later phase"}
+          />
+        )}
       </div>
     </div>
   );
