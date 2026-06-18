@@ -1,19 +1,28 @@
+import type { ReactNode } from "react";
 import { Menu } from "../../components/Menu";
 import { Icon } from "../../components/Icon";
 import { useViewState } from "../../store/viewState";
 import type { TrackPayload } from "../../types/payload";
+import {
+  ShortTermLufsBody, CrestBody, TilesBody, SummaryBody, PlaceholderBody, TimeOverlay,
+} from "./bodies";
 
-const VIEWS: Record<string, { title: string; sub: string; family: string }> = {
-  shortTermLufs: { title: "Short-term LUFS", sub: "loudness · section-feel", family: "Loudness" },
-  crest:         { title: "Crest factor", sub: "where it's being limited", family: "Loudness" },
-  ltas:          { title: "LTAS — tonal balance", sub: "long-term average spectrum", family: "Frequency" },
-  liveSpectrum:  { title: "Live spectrum", sub: "frame at playhead", family: "Frequency" },
-  bandDelta:     { title: "Band-energy delta", sub: "A relative to B", family: "Frequency" },
-  correlation:   { title: "Phase correlation", sub: "mono-compatibility", family: "Stereo" },
-  goniometer:    { title: "Goniometer", sub: "A / B side-by-side", family: "Stereo" },
-  spectrogram:   { title: "Spectrogram", sub: "A-row over B-row", family: "Spectrogram" },
-  tiles:         { title: "Region readout", sub: "matched aggregates", family: "Summary" },
-  summary:       { title: "Static summary", sub: "whole-file aggregates", family: "Summary" },
+const VIEWS: Record<string, { title: string; sub: string; family: string; kind: string; h: number | null }> = {
+  shortTermLufs: { title: "Short-term LUFS", sub: "loudness · section-feel", family: "Loudness", kind: "time", h: 188 },
+  crest:         { title: "Crest factor", sub: "where it's being limited", family: "Loudness", kind: "time", h: 168 },
+  ltas:          { title: "LTAS — tonal balance", sub: "long-term average spectrum", family: "Frequency", kind: "soon", h: null },
+  liveSpectrum:  { title: "Live spectrum", sub: "frame at playhead", family: "Frequency", kind: "soon", h: null },
+  bandDelta:     { title: "Band-energy delta", sub: "A relative to B", family: "Frequency", kind: "soon", h: null },
+  correlation:   { title: "Phase correlation", sub: "mono-compatibility", family: "Stereo", kind: "soon", h: null },
+  goniometer:    { title: "Goniometer", sub: "A / B side-by-side", family: "Stereo", kind: "soon", h: null },
+  spectrogram:   { title: "Spectrogram", sub: "A-row over B-row", family: "Spectrogram", kind: "soon", h: null },
+  tiles:         { title: "Region readout", sub: "matched aggregates", family: "Summary", kind: "tiles", h: null },
+  summary:       { title: "Static summary", sub: "whole-file aggregates", family: "Summary", kind: "summary", h: null },
+};
+
+const PHASE_FOR: Record<string, string> = {
+  ltas: "Phase 2", liveSpectrum: "Phase 2", bandDelta: "Phase 2",
+  correlation: "Phase 3", goniometer: "Phase 3", spectrogram: "Phase 5",
 };
 
 const FAMILY_ORDER = ["Loudness", "Frequency", "Stereo", "Spectrogram", "Summary"];
@@ -61,8 +70,23 @@ interface PanelProps {
   onClose: () => void;
 }
 
-function Panel({ id, idx, count, onChange, onMove, onClose }: PanelProps) {
-  const v = VIEWS[id] ?? { title: id, sub: "", family: "" };
+function Panel({ id, idx, count, mix, ref, onChange, onMove, onClose }: PanelProps) {
+  const v = VIEWS[id] ?? { title: id, sub: "", family: "", kind: "soon", h: null };
+  const isTime = v.kind === "time";
+  let body: ReactNode;
+  if (!mix || !ref) {
+    body = <PlaceholderBody title={v.title} phase="analysis" />;
+  } else if (id === "shortTermLufs") {
+    body = <ShortTermLufsBody mix={mix} ref={ref} />;
+  } else if (id === "crest") {
+    body = <CrestBody mix={mix} ref={ref} />;
+  } else if (id === "tiles") {
+    body = <TilesBody mix={mix} ref={ref} />;
+  } else if (id === "summary") {
+    body = <SummaryBody mix={mix} ref={ref} />;
+  } else {
+    body = <PlaceholderBody title={v.title} phase={PHASE_FOR[id] ?? "a later phase"} />;
+  }
   return (
     <div className="panel">
       <div className="panel-head">
@@ -105,10 +129,9 @@ function Panel({ id, idx, count, onChange, onMove, onClose }: PanelProps) {
           </button>
         </div>
       </div>
-      <div className="panel-body">
-        <div className="empty-slot" style={{ fontSize: 11, color: "var(--tx-3)" }}>
-          No data yet — {v.title} lands in Phase 1
-        </div>
+      <div className="panel-body" style={v.h ? { height: v.h } : { minHeight: 0 }}>
+        {body}
+        {isTime && <TimeOverlay />}
       </div>
     </div>
   );
