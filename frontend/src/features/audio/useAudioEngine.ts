@@ -2,6 +2,7 @@ import { useEffect, useLayoutEffect, useRef } from "react";
 import { useViewState } from "../../store/viewState";
 import { api } from "../../api/client";
 import { AudioEngine } from "./engine";
+import { audioTap } from "./tap";
 import type { TrackPayload } from "../../types/payload";
 
 interface Args {
@@ -52,6 +53,7 @@ export function useAudioEngine({ compId, mix, ref, playing, setPlaying }: Args):
         // Sync engine position to wherever the store/UI thinks the playhead is.
         engine.seek(storeRef.current.playhead);
         readyRef.current = true;
+        audioTap.set(engine);
         // User may have pressed play before the buffers were ready.
         if (playingRef.current) {
           engine.resume();
@@ -61,6 +63,7 @@ export function useAudioEngine({ compId, mix, ref, playing, setPlaying }: Args):
         readyRef.current = false;
       });
     return () => {
+      audioTap.set(null);
       engine.dispose();
       engineRef.current = null;
     };

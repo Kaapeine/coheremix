@@ -7,6 +7,10 @@ interface Voice {
   buffer: AudioBuffer;
   gain: GainNode;
   src: AudioBufferSourceNode | null;
+  analyser: AnalyserNode;          // mono, for the live spectrum
+  splitter: ChannelSplitterNode;   // → L/R analysers for the goniometer
+  analyserL: AnalyserNode;
+  analyserR: AnalyserNode;
 }
 
 /**
@@ -45,10 +49,21 @@ export class AudioEngine {
       this.fetchDecode(load.refUrl),
     ]);
     const mkVoice = (buffer: AudioBuffer): Voice => {
-      const gain = this.ctx!.createGain();
-      gain.connect(this.ctx!.destination);
+      const ctx = this.ctx!;
+      const gain = ctx.createGain();
+      gain.connect(ctx.destination);
       gain.gain.value = 0;
-      return { buffer, gain, src: null };
+      const analyser = ctx.createAnalyser();
+      analyser.fftSize = 8192;
+      analyser.smoothingTimeConstant = 0.7;
+      const splitter = ctx.createChannelSplitter(2);
+      const analyserL = ctx.createAnalyser();
+      const analyserR = ctx.createAnalyser();
+      analyserL.fftSize = 2048;
+      analyserR.fftSize = 2048;
+      splitter.connect(analyserL, 0);
+      splitter.connect(analyserR, 1);
+      return { buffer, gain, src: null, analyser, splitter, analyserL, analyserR };
     };
     this.mix = mkVoice(mixBuf);
     this.ref = mkVoice(refBuf);
@@ -87,6 +102,20 @@ export class AudioEngine {
     if (wasPlaying) this.play(pos); // re-sync B position
   }
 
+  getAnalyser(role: "mix" | "reference"): AnalyserNode | null {
+    const v = role === "mix" ? this.mix : this.ref;
+    return v?.analyser ?? null;
+  }
+
+  getStereoAnalysers(role: "mix" | "reference"): { l: AnalyserNode; r: AnalyserNode } | null {
+    const v = role === "mix" ? this.mix : this.ref;
+    return v ? { l: v.analyserL, r: v.analyserR } : null;
+  }
+
+  sampleRate(): number {
+    return this.ctx?.sampleRate ?? 48000;
+  }
+
   private applyGains() {
     if (!this.mix || !this.ref) return;
     const mg = this.matchOn ? this.mixGainLin : 1;
@@ -113,6 +142,8 @@ export class AudioEngine {
       const src = this.ctx!.createBufferSource();
       src.buffer = v.buffer;
       src.connect(v.gain);
+      src.connect(v.analyser);
+      src.connect(v.splitter);
       if (at >= 0) {
         src.start(now, at);
       } else {
