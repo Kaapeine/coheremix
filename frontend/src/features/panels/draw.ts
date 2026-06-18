@@ -148,9 +148,10 @@ function logFreqX(f: number, padL: number, w: number): number {
 export function ltasCurve(canvas: HTMLCanvasElement, A: TrackPayload, B: TrackPayload) {
   const s = setup(canvas); if (!s.ok) return; const { ctx, w, h } = s;
   const a = css("--a"), b = css("--b"), line = "rgba(255,255,255,0.06)", tx3 = css("--tx-3");
-  const padL = 30;
+  const padL = 30, padB = 14;
+  const plotH = h - padB;
   const dbLo = -54, dbHi = 6;
-  const yOf = (db: number) => h - ((db - dbLo) / (dbHi - dbLo)) * h;
+  const yOf = (db: number) => plotH - ((db - dbLo) / (dbHi - dbLo)) * plotH;
   ctx.font = '9px "JetBrains Mono", monospace';
   // horizontal dB gridlines
   for (let db = 0; db >= -48; db -= 12) {
@@ -158,10 +159,12 @@ export function ltasCurve(canvas: HTMLCanvasElement, A: TrackPayload, B: TrackPa
     ctx.strokeStyle = line; ctx.beginPath(); ctx.moveTo(padL, y + 0.5); ctx.lineTo(w, y + 0.5); ctx.stroke();
     ctx.fillStyle = tx3; ctx.fillText(`${db}`, 4, y + 3);
   }
+  // x-axis baseline (separates the plot from the frequency-label row)
+  ctx.strokeStyle = line; ctx.beginPath(); ctx.moveTo(padL, plotH + 0.5); ctx.lineTo(w, plotH + 0.5); ctx.stroke();
   // vertical decade gridlines + labels
   for (const f of [100, 1000, 10000]) {
     const x = logFreqX(f, padL, w);
-    ctx.strokeStyle = line; ctx.beginPath(); ctx.moveTo(x + 0.5, 0); ctx.lineTo(x + 0.5, h - 12); ctx.stroke();
+    ctx.strokeStyle = line; ctx.beginPath(); ctx.moveTo(x + 0.5, 0); ctx.lineTo(x + 0.5, plotH); ctx.stroke();
     ctx.fillStyle = tx3; ctx.fillText(f >= 1000 ? `${f / 1000}k` : `${f}`, x + 3, h - 3);
   }
   // minor gridlines between decades (20..90, 200..900, 2000..9000), labels on a subset only
@@ -172,7 +175,7 @@ export function ltasCurve(canvas: HTMLCanvasElement, A: TrackPayload, B: TrackPa
       const f = decade * m;
       if (f < F_LO || f >= F_HI) continue;
       const x = logFreqX(f, padL, w);
-      ctx.strokeStyle = minorLine; ctx.beginPath(); ctx.moveTo(x + 0.5, 0); ctx.lineTo(x + 0.5, h - 12); ctx.stroke();
+      ctx.strokeStyle = minorLine; ctx.beginPath(); ctx.moveTo(x + 0.5, 0); ctx.lineTo(x + 0.5, plotH); ctx.stroke();
       if (labeled.has(f)) {
         ctx.fillStyle = tx3; ctx.fillText(f >= 1000 ? `${f / 1000}k` : `${f}`, x + 3, h - 3);
       }

@@ -7,17 +7,17 @@ import {
   ShortTermLufsBody, CrestBody, TilesBody, SummaryBody, LtasBody, PlaceholderBody, TimeOverlay,
 } from "./bodies";
 
-const VIEWS: Record<string, { title: string; sub: string; family: string; kind: string; h: number | null }> = {
-  shortTermLufs: { title: "Short-term LUFS", sub: "loudness · section-feel", family: "Loudness", kind: "time", h: 188 },
-  crest:         { title: "Crest factor", sub: "where it's being limited", family: "Loudness", kind: "time", h: 168 },
-  ltas:          { title: "LTAS — tonal balance", sub: "long-term average spectrum", family: "Frequency", kind: "freq", h: 200 },
-  liveSpectrum:  { title: "Live spectrum", sub: "frame at playhead", family: "Frequency", kind: "soon", h: null },
-  bandDelta:     { title: "Band-energy delta", sub: "A relative to B", family: "Frequency", kind: "soon", h: null },
-  correlation:   { title: "Phase correlation", sub: "mono-compatibility", family: "Stereo", kind: "soon", h: null },
-  goniometer:    { title: "Goniometer", sub: "A / B side-by-side", family: "Stereo", kind: "soon", h: null },
-  spectrogram:   { title: "Spectrogram", sub: "A-row over B-row", family: "Spectrogram", kind: "soon", h: null },
-  tiles:         { title: "Region readout", sub: "matched aggregates", family: "Summary", kind: "tiles", h: null },
-  summary:       { title: "Static summary", sub: "whole-file aggregates", family: "Summary", kind: "summary", h: null },
+const VIEWS: Record<string, { title: string; sub: string; family: string; kind: string }> = {
+  shortTermLufs: { title: "Short-term LUFS", sub: "loudness · section-feel", family: "Loudness", kind: "time" },
+  crest:         { title: "Crest factor", sub: "where it's being limited", family: "Loudness", kind: "time" },
+  ltas:          { title: "LTAS — tonal balance", sub: "long-term average spectrum", family: "Frequency", kind: "freq" },
+  liveSpectrum:  { title: "Live spectrum", sub: "frame at playhead", family: "Frequency", kind: "soon" },
+  bandDelta:     { title: "Band-energy delta", sub: "A relative to B", family: "Frequency", kind: "soon" },
+  correlation:   { title: "Phase correlation", sub: "mono-compatibility", family: "Stereo", kind: "soon" },
+  goniometer:    { title: "Goniometer", sub: "A / B side-by-side", family: "Stereo", kind: "soon" },
+  spectrogram:   { title: "Spectrogram", sub: "A-row over B-row", family: "Spectrogram", kind: "soon" },
+  tiles:         { title: "Region readout", sub: "matched aggregates", family: "Summary", kind: "tiles" },
+  summary:       { title: "Static summary", sub: "whole-file aggregates", family: "Summary", kind: "summary" },
 };
 
 const PHASE_FOR: Record<string, string> = {
@@ -71,7 +71,7 @@ interface PanelProps {
 }
 
 function Panel({ id, idx, count, mix, ref, onChange, onMove, onClose }: PanelProps) {
-  const v = VIEWS[id] ?? { title: id, sub: "", family: "", kind: "soon", h: null };
+  const v = VIEWS[id] ?? { title: id, sub: "", family: "", kind: "soon" };
   const isTime = v.kind === "time";
   let body: ReactNode;
   if (!mix || !ref) {
@@ -131,7 +131,7 @@ function Panel({ id, idx, count, mix, ref, onChange, onMove, onClose }: PanelPro
           </button>
         </div>
       </div>
-      <div className="panel-body" style={v.h ? { height: v.h } : { minHeight: 0 }}>
+      <div className="panel-body">
         {body}
         {isTime && <TimeOverlay />}
       </div>
