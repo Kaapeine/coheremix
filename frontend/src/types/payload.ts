@@ -20,6 +20,24 @@ export interface TrackSummary {
   state: string;
 }
 
+export interface Features {
+  shortTermLUFS: number[];
+  momentaryLUFS: number[];
+  crest: number[];
+  truePeak: number[];
+  // later phases: correlation, centroid, msRatio
+  [key: string]: number[] | undefined;
+}
+
+export interface StaticAggregates {
+  integrated: number;
+  lra: number;
+  truePeakMax: number;
+  plr: number;
+  crestAvg: number;
+  avgCorrelation?: number; // P3
+}
+
 export interface TrackPayload {
   track: "user" | "reference";
   role: "mix" | "reference";
@@ -28,11 +46,12 @@ export interface TrackPayload {
   meta: { sampleRate: number; duration: number; channels: number };
   gainMatch: GainMatch;
   hop: number;
-  features: Record<string, number[]>;
+  features: Features;
   ltas: unknown | null;
   spectrogram: unknown | null;
   waveform: { peaksByZoom: Record<string, number[]> };
-  static: Record<string, number>;
+  static: StaticAggregates;
+  kblocks: number[][]; // per-100ms [msqL, msqR]
 }
 
 export interface ComparisonOut {
