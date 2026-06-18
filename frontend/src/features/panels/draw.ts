@@ -199,3 +199,30 @@ export function ltasCurve(canvas: HTMLCanvasElement, A: TrackPayload, B: TrackPa
   };
   drawCurve(A, a); drawCurve(B, b);
 }
+
+/** 7 vertical bars = (A − B) band energy in dB, centred on a zero line. */
+export function bandDelta(canvas: HTMLCanvasElement, A: TrackPayload, B: TrackPayload) {
+  const s = setup(canvas); if (!s.ok) return; const { ctx, w, h } = s;
+  const a = css("--a"), b = css("--b"), line = "rgba(255,255,255,0.10)", tx3 = css("--tx-3");
+  const range = 9; // ±9 dB full scale
+  const mid = h / 2;
+  const yOf = (d: number) => mid - (Math.max(-range, Math.min(range, d)) / range) * (mid - 14);
+  ctx.font = '9px "JetBrains Mono", monospace';
+  ctx.strokeStyle = line; ctx.beginPath(); ctx.moveTo(0, mid + 0.5); ctx.lineTo(w, mid + 0.5); ctx.stroke();
+  const n = R.BAND_EDGES.length;
+  const slot = w / n;
+  for (let i = 0; i < n; i++) {
+    const { name, lo, hi } = R.BAND_EDGES[i];
+    const dA = R.bandEnergy(A, lo, hi), dB = R.bandEnergy(B, lo, hi);
+    const d = (isFinite(dA) && isFinite(dB)) ? dA - dB : 0;
+    const x = i * slot + slot * 0.2;
+    const bw = slot * 0.6;
+    const y = yOf(d);
+    ctx.fillStyle = d >= 0 ? a : b;
+    ctx.fillRect(x, Math.min(mid, y), bw, Math.abs(y - mid));
+    ctx.fillStyle = tx3; ctx.textAlign = "center";
+    ctx.fillText(name, x + bw / 2, 10);
+    ctx.fillText((d >= 0 ? "+" : "") + d.toFixed(1), x + bw / 2, d >= 0 ? y - 3 : y + 9);
+  }
+  ctx.textAlign = "left";
+}
