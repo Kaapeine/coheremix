@@ -88,6 +88,7 @@ export function TilesBody({ mix, ref }: BodyProps) {
 
 export function SummaryBody({ mix, ref }: BodyProps) {
   const rows: [string, number, number, string][] = [
+    ["Integrated LUFS", mix.static.integrated, ref.static.integrated, "LUFS"],
     ["LRA", mix.static.lra, ref.static.lra, "LU"],
     ["True-peak max", mix.static.truePeakMax, ref.static.truePeakMax, "dBTP"],
     ["PLR", mix.static.plr, ref.static.plr, "dB"],
