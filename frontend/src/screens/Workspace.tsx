@@ -102,9 +102,9 @@ export function Workspace() {
       <div className="main">
         <div className="left-col">
           <Transport compId={id} mixPayload={mixPayload} refPayload={refPayload} />
-          <PanelWorkspace />
+          <PanelWorkspace mix={mixPayload} ref={refPayload} />
         </div>
-        <MeterColumn />
+        <MeterColumn mix={mixPayload} ref={refPayload} />
       </div>
     </div>
   );

@@ -1,6 +1,7 @@
 import { Menu } from "../../components/Menu";
 import { Icon } from "../../components/Icon";
 import { useViewState } from "../../store/viewState";
+import type { TrackPayload } from "../../types/payload";
 
 const VIEWS: Record<string, { title: string; sub: string; family: string }> = {
   shortTermLufs: { title: "Short-term LUFS", sub: "loudness · section-feel", family: "Loudness" },
@@ -53,6 +54,8 @@ interface PanelProps {
   id: string;
   idx: number;
   count: number;
+  mix: TrackPayload | null;
+  ref: TrackPayload | null;
   onChange: (k: string) => void;
   onMove: (dir: number) => void;
   onClose: () => void;
@@ -111,7 +114,12 @@ function Panel({ id, idx, count, onChange, onMove, onClose }: PanelProps) {
   );
 }
 
-export function PanelWorkspace() {
+interface WorkspaceProps {
+  mix: TrackPayload | null;
+  ref: TrackPayload | null;
+}
+
+export function PanelWorkspace({ mix, ref }: WorkspaceProps) {
   const panels = useViewState((s) => s.panels);
   const set = useViewState((s) => s.set);
 
@@ -157,6 +165,8 @@ export function PanelWorkspace() {
             id={id}
             idx={i}
             count={panels.length}
+            mix={mix}
+            ref={ref}
             onChange={(k) => set({ panels: panels.map((p, j) => (j === i ? k : p)) })}
             onMove={(dir) => move(i, dir)}
             onClose={() => set({ panels: panels.filter((_, j) => j !== i) })}

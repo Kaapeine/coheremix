@@ -1,6 +1,7 @@
 import { Menu } from "../../components/Menu";
 import { Icon } from "../../components/Icon";
 import { useViewState } from "../../store/viewState";
+import type { TrackPayload } from "../../types/payload";
 
 const METERS: Record<string, string> = {
   lufs: "LUFS",
@@ -14,6 +15,8 @@ const METERS: Record<string, string> = {
 interface MeterSlotProps {
   id: string;
   taken: string[];
+  mix: TrackPayload | null;
+  ref: TrackPayload | null;
   onChange: (k: string) => void;
 }
 
@@ -67,7 +70,12 @@ function MeterSlot({ id, taken, onChange }: MeterSlotProps) {
   );
 }
 
-export function MeterColumn() {
+interface MeterColumnProps {
+  mix: TrackPayload | null;
+  ref: TrackPayload | null;
+}
+
+export function MeterColumn({ mix, ref }: MeterColumnProps) {
   const meterSlots = useViewState((s) => s.meterSlots);
   const set = useViewState((s) => s.set);
 
@@ -84,6 +92,8 @@ export function MeterColumn() {
           key={i}
           id={id}
           taken={meterSlots}
+          mix={mix}
+          ref={ref}
           onChange={(k) => handleChange(i, k)}
         />
       ))}
