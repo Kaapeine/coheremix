@@ -8,6 +8,9 @@ RUN npm run build
 
 FROM python:3.12-slim-trixie
 COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /bin/
+COPY --from=mwader/static-ffmpeg:7.0 /ffprobe /usr/local/bin/
+COPY --from=mwader/static-ffmpeg:7.0 /ffmpeg /usr/local/bin/
+
 COPY . .
 COPY --from=frontend-build /frontend/dist ./frontend/dist
 WORKDIR /backend
