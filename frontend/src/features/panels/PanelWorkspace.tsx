@@ -4,14 +4,14 @@ import { Icon } from "../../components/Icon";
 import { useViewState } from "../../store/viewState";
 import type { TrackPayload } from "../../types/payload";
 import {
-  ShortTermLufsBody, CrestBody, TilesBody, SummaryBody, LtasBody, BandDeltaBody, PlaceholderBody, TimeOverlay,
+  ShortTermLufsBody, CrestBody, TilesBody, SummaryBody, LtasBody, BandDeltaBody, SpectrumBody, PlaceholderBody, TimeOverlay,
 } from "./bodies";
 
 const VIEWS: Record<string, { title: string; sub: string; family: string; kind: string }> = {
   shortTermLufs: { title: "Short-term LUFS", sub: "loudness · section-feel", family: "Loudness", kind: "time" },
   crest:         { title: "Crest factor", sub: "where it's being limited", family: "Loudness", kind: "time" },
   ltas:          { title: "LTAS — tonal balance", sub: "long-term average spectrum", family: "Frequency", kind: "freq" },
-  liveSpectrum:  { title: "Live spectrum", sub: "frame at playhead", family: "Frequency", kind: "soon" },
+  liveSpectrum:  { title: "Live spectrum", sub: "real-time · holds on pause", family: "Frequency", kind: "freq" },
   bandDelta:     { title: "Band-energy delta", sub: "A relative to B · whole file", family: "Frequency", kind: "freq" },
   correlation:   { title: "Phase correlation", sub: "mono-compatibility", family: "Stereo", kind: "soon" },
   goniometer:    { title: "Goniometer", sub: "A / B side-by-side", family: "Stereo", kind: "soon" },
@@ -21,7 +21,6 @@ const VIEWS: Record<string, { title: string; sub: string; family: string; kind: 
 };
 
 const PHASE_FOR: Record<string, string> = {
-  liveSpectrum: "Phase 2",
   correlation: "Phase 3", goniometer: "Phase 3", spectrogram: "Phase 5",
 };
 
@@ -88,6 +87,8 @@ function Panel({ id, idx, count, mix, ref, onChange, onMove, onClose }: PanelPro
     body = <LtasBody mix={mix} ref={ref} />;
   } else if (id === "bandDelta") {
     body = <BandDeltaBody mix={mix} ref={ref} />;
+  } else if (id === "liveSpectrum") {
+    body = <SpectrumBody mix={mix} ref={ref} />;
   } else {
     body = <PlaceholderBody title={v.title} phase={PHASE_FOR[id] ?? "a later phase"} />;
   }

@@ -1,10 +1,12 @@
 /* eslint-disable react-hooks/refs -- `ref` here is the B/reference-track payload
  * (BodyProps.ref: TrackPayload), not a React ref object; the rule taints on the
  * prop key name and can't tell the two apart. */
+import { useEffect, useRef } from "react";
 import type { TrackPayload } from "../../types/payload";
 import { useViewState } from "../../store/viewState";
 import { useCanvasDraw } from "./useCanvasDraw";
 import { lufsLane, valueLane, ltasCurve, bandDelta } from "./draw";
+import { audioTap } from "../audio/tap";
 import * as R from "../analysis/read";
 
 const GUTTER = 64;
@@ -60,6 +62,94 @@ export function LtasBody({ mix, ref }: BodyProps) {
 export function BandDeltaBody({ mix, ref }: BodyProps) {
   const cref = useCanvasDraw((cv) => bandDelta(cv, mix, ref), [mix, ref]);
   return <canvas ref={cref} style={{ width: "100%", height: "100%", display: "block" }} />;
+}
+
+const SPEC_F_LO = 20, SPEC_F_HI = 20000;
+
+export function SpectrumBody({ mix, ref }: BodyProps) {
+  const canvasRef = useRef<HTMLCanvasElement | null>(null);
+  // Held frames: last non-silent analyser reading per track (dB arrays).
+  const heldA = useRef<Float32Array | null>(null);
+  const heldB = useRef<Float32Array | null>(null);
+
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const cssVar = (n: string) =>
+      getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+    const sr = audioTap.sampleRate();
+    let raf = 0;
+
+    const read = (role: "mix" | "reference", held: typeof heldA) => {
+      const an = audioTap.analyser(role);
+      if (!an) return held.current;
+      const buf = new Float32Array(an.frequencyBinCount);
+      an.getFloatFrequencyData(buf); // dB, −Infinity when silent
+      let peak = -Infinity;
+      for (let i = 0; i < buf.length; i++) if (buf[i] > peak) peak = buf[i];
+      if (peak > -100) held.current = buf; // only overwrite on real signal (hold-on-pause)
+      return held.current;
+    };
+
+    const draw = () => {
+      const r = canvas.getBoundingClientRect();
+      const dpr = Math.min(2, window.devicePixelRatio || 1);
+      const w = Math.max(1, Math.round(r.width)), h = Math.max(1, Math.round(r.height));
+      if (canvas.width !== w * dpr || canvas.height !== h * dpr) { canvas.width = w * dpr; canvas.height = h * dpr; }
+      const ctx = canvas.getContext("2d")!;
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      ctx.clearRect(0, 0, w, h);
+      const a = cssVar("--a"), b = cssVar("--b"), line = "rgba(255,255,255,0.06)", tx3 = cssVar("--tx-3");
+      const padL = 30, padB = 14, dbLo = -100, dbHi = -20;
+      const plotH = h - padB;
+      const xOf = (f: number) =>
+        padL + ((Math.log10(f) - Math.log10(SPEC_F_LO)) / (Math.log10(SPEC_F_HI) - Math.log10(SPEC_F_LO))) * (w - padL);
+      const yOf = (db: number) => plotH - ((Math.max(dbLo, Math.min(dbHi, db)) - dbLo) / (dbHi - dbLo)) * plotH;
+      ctx.font = '9px "JetBrains Mono", monospace';
+      // x-axis baseline + major decade gridlines
+      ctx.strokeStyle = line; ctx.beginPath(); ctx.moveTo(padL, plotH + 0.5); ctx.lineTo(w, plotH + 0.5); ctx.stroke();
+      for (const f of [100, 1000, 10000]) {
+        const x = xOf(f);
+        ctx.strokeStyle = line; ctx.beginPath(); ctx.moveTo(x + 0.5, 0); ctx.lineTo(x + 0.5, plotH); ctx.stroke();
+        ctx.fillStyle = tx3; ctx.fillText(f >= 1000 ? `${f / 1000}k` : `${f}`, x + 3, h - 3);
+      }
+      // minor gridlines between decades (20..90, 200..900, 2000..9000), labels on a subset only
+      const minorLine = "rgba(255,255,255,0.03)";
+      const labeled = new Set([20, 30, 40, 60, 80, 200, 300, 400, 600, 800, 2000, 3000, 4000, 6000, 8000]);
+      for (const decade of [10, 100, 1000]) {
+        for (let m = 2; m <= 9; m++) {
+          const f = decade * m;
+          if (f < SPEC_F_LO || f >= SPEC_F_HI) continue;
+          const x = xOf(f);
+          ctx.strokeStyle = minorLine; ctx.beginPath(); ctx.moveTo(x + 0.5, 0); ctx.lineTo(x + 0.5, plotH); ctx.stroke();
+          if (labeled.has(f)) {
+            ctx.fillStyle = tx3; ctx.fillText(f >= 1000 ? `${f / 1000}k` : `${f}`, x + 3, h - 3);
+          }
+        }
+      }
+      ctx.fillStyle = tx3; ctx.fillText("20k", w - 22, h - 3);
+      // live (or held) analyser spectra
+      const live = (frame: Float32Array | null, color: string, an: AnalyserNode | null) => {
+        if (!frame || !an) return;
+        const bins = frame.length;
+        ctx.beginPath(); let started = false;
+        for (let i = 1; i < bins; i++) {
+          const f = (i * sr) / (bins * 2);
+          if (f < SPEC_F_LO || f > SPEC_F_HI) continue;
+          const x = xOf(f), y = yOf(frame[i]);
+          if (!started) { ctx.moveTo(x, y); started = true; } else ctx.lineTo(x, y);
+        }
+        ctx.strokeStyle = color; ctx.lineWidth = 1.4; ctx.lineJoin = "round"; ctx.stroke();
+      };
+      live(read("mix", heldA), a, audioTap.analyser("mix"));
+      live(read("reference", heldB), b, audioTap.analyser("reference"));
+      raf = requestAnimationFrame(draw);
+    };
+    raf = requestAnimationFrame(draw);
+    return () => cancelAnimationFrame(raf);
+  }, [mix, ref]);
+
+  return <canvas ref={canvasRef} style={{ width: "100%", height: "100%", display: "block" }} />;
 }
 
 export function TilesBody({ mix, ref }: BodyProps) {
