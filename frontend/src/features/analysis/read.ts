@@ -60,3 +60,28 @@ export function regionIntegrated(track: TrackPayload, t0: number, t1: number): n
   const finalPow = kept2.reduce((a, b) => a + b, 0) / kept2.length;
   return loud(finalPow);
 }
+
+/** 7 mastering bands, matching backend ComparisonDefaults.bandEdges. */
+export const BAND_EDGES: { name: string; lo: number; hi: number }[] = [
+  { name: "Sub", lo: 20, hi: 60 },
+  { name: "Low", lo: 60, hi: 120 },
+  { name: "L-Mid", lo: 120, hi: 400 },
+  { name: "Mid", lo: 400, hi: 2000 },
+  { name: "H-Mid", lo: 2000, hi: 5000 },
+  { name: "Pres", lo: 5000, hi: 10000 },
+  { name: "Air", lo: 10000, hi: 20000 },
+];
+
+/** Mean LTAS level (dB) over [lo,hi). -Infinity if no LTAS / no bins in range. */
+export function bandEnergy(track: TrackPayload, lo: number, hi: number): number {
+  const l = track.ltas;
+  if (!l) return -Infinity;
+  let pow = 0, c = 0;
+  for (let i = 0; i < l.freqs.length; i++) {
+    if (l.freqs[i] >= lo && l.freqs[i] < hi) {
+      pow += Math.pow(10, l.db[i] / 10);
+      c++;
+    }
+  }
+  return c ? 10 * Math.log10(pow / c) : -Infinity;
+}

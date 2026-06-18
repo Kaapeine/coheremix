@@ -20,12 +20,19 @@ export interface TrackSummary {
   state: string;
 }
 
+export interface Ltas {
+  freqs: number[]; // log-spaced bin center frequencies (Hz)
+  db: number[];    // peak-normalised dB per bin
+  bins: number;
+}
+
 export interface Features {
   shortTermLUFS: number[];
   momentaryLUFS: number[];
   crest: number[];
   truePeak: number[];
-  // later phases: correlation, centroid, msRatio
+  centroid?: number[]; // P2
+  // P3: correlation, msRatio, balance
   [key: string]: number[] | undefined;
 }
 
@@ -35,6 +42,8 @@ export interface StaticAggregates {
   truePeakMax: number;
   plr: number;
   crestAvg: number;
+  centroidAvg?: number; // P2
+  tilt?: number;        // P2
   avgCorrelation?: number; // P3
 }
 
@@ -47,7 +56,7 @@ export interface TrackPayload {
   gainMatch: GainMatch;
   hop: number;
   features: Features;
-  ltas: unknown | null;
+  ltas: Ltas | null;
   spectrogram: unknown | null;
   waveform: { peaksByZoom: Record<string, number[]> };
   static: StaticAggregates;
