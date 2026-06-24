@@ -3,6 +3,8 @@ const ICONS: Record<string, string> = {
   pause:    "M6 4h3.2v12H6zM10.8 4H14v12h-3.2z",
   loop:     "M5 7h8 a3 3 0 0 1 0 6h-8 a3 3 0 0 1 0-6M10.5 4.5l2.5 2.5-2.5 2.5M7.5 10.5l-2.5 2.5 2.5 2.5",
   link:     "M8 12a3 3 0 0 1 0-4l2-2a3 3 0 0 1 4 4l-1 1M12 8a3 3 0 0 1 0 4l-2 2a3 3 0 0 1-4-4l1-1",
+  lock:     "M7 9V7a3 3 0 0 1 6 0v2M5 9h10v8H5z",
+  unlock:   "M7 9V7a3 3 0 0 1 5.6-1.7M5 9h10v8H5z",
   zoomIn:   "M9 3a6 6 0 1 0 0 12A6 6 0 0 0 9 3zM14 14l3.5 3.5M9 6v6M6 9h6",
   zoomOut:  "M9 3a6 6 0 1 0 0 12A6 6 0 0 0 9 3zM14 14l3.5 3.5M6 9h6",
   plus:     "M10 4v12M4 10h12",

@@ -1,13 +1,5 @@
 import { Icon } from "../../components/Icon";
-import { Menu } from "../../components/Menu";
-import { useViewState, type MatchMode } from "../../store/viewState";
-
-const MATCH_OPTIONS: { value: MatchMode; label: string }[] = [
-  { value: "integrated", label: "Integrated" },
-  { value: "shortterm", label: "Short-term" },
-  { value: "region", label: "Region" },
-  { value: "off", label: "Off" },
-];
+import { useViewState } from "../../store/viewState";
 
 function fmtTime(s: number): string {
   const m = Math.floor(s / 60);
@@ -23,8 +15,7 @@ interface Props {
 
 export function ControlRow({ playing, setPlaying, onRestart }: Props) {
   const loop = useViewState((s) => s.loop);
-  const linked = useViewState((s) => s.linked);
-  const matchMode = useViewState((s) => s.matchMode);
+  const locked = useViewState((s) => s.locked);
   const playhead = useViewState((s) => s.playhead);
   const duration = useViewState((s) => s.duration);
   const set = useViewState((s) => s.set);
@@ -91,63 +82,14 @@ export function ControlRow({ playing, setPlaying, onRestart }: Props) {
 
       <div style={{ flex: 1 }} />
 
-      {/* link toggle */}
+      {/* lock toggle */}
       <button
-        className={`tbtn ${linked ? "on" : ""}`}
-        onClick={() => set({ linked: !linked })}
-        title="Link lanes"
+        className={`tbtn ${locked ? "on" : ""}`}
+        onClick={() => set({ locked: !locked })}
+        title={locked ? "Unlock lanes" : "Lock lanes"}
       >
-        <Icon name="link" size={14} />
+        <Icon name={locked ? "lock" : "unlock"} size={14} />
       </button>
-
-      <div className="ctrl-divider" />
-
-      {/* match mode */}
-      <Menu
-        trigger={(_open, toggle) => (
-          <button
-            className="tbtn"
-            onClick={toggle}
-            style={{ gap: 6, padding: "0 10px" }}
-          >
-            <span
-              style={{
-                fontSize: 9.5,
-                letterSpacing: ".08em",
-                textTransform: "uppercase",
-                color: "var(--tx-3)",
-              }}
-            >
-              Match
-            </span>
-            <span style={{ fontSize: 11.5, color: "var(--tx-1)" }}>
-              {MATCH_OPTIONS.find((o) => o.value === matchMode)?.label ??
-                "Integrated"}
-            </span>
-          </button>
-        )}
-      >
-        {(close) => (
-          <div>
-            <div className="menu-label">Loudness match</div>
-            {MATCH_OPTIONS.map((opt) => (
-              <div
-                key={opt.value}
-                className={`menu-item ${matchMode === opt.value ? "sel-on" : ""}`}
-                onClick={() => {
-                  set({ matchMode: opt.value });
-                  close();
-                }}
-              >
-                {opt.label}
-                {matchMode === opt.value && (
-                  <span className="check">✓</span>
-                )}
-              </div>
-            ))}
-          </div>
-        )}
-      </Menu>
     </div>
   );
 }

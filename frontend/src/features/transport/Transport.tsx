@@ -161,12 +161,10 @@ export function Transport({ compId, mixPayload, refPayload }: Props) {
     const rect = waveRef.current.getBoundingClientRect();
     // Record the click's A-time so a plain click seeks (a drag instead aligns B).
     const t = scroll + (e.clientX - rect.left) * secPerPx;
-    dragRef.current = {
-      mode: "alignB",
-      startX: e.clientX,
-      startTime: t,
-      startOffset: offsetB,
-    };
+    // Locked: B no longer drags to realign — behaves like the A lane (seek/region-select).
+    dragRef.current = store.locked
+      ? { mode: "region", startX: e.clientX, startTime: t, startOffset: 0 }
+      : { mode: "alignB", startX: e.clientX, startTime: t, startOffset: offsetB };
   };
 
   const playheadPx = (playhead - scroll) / secPerPx;
@@ -198,7 +196,7 @@ export function Transport({ compId, mixPayload, refPayload }: Props) {
         </div>
 
         {/* B — reference */}
-        <div className="wave-row" onMouseDown={onBMouseDown}>
+        <div className="wave-row" onMouseDown={onBMouseDown} style={{ cursor: store.locked ? "default" : "grab" }}>
           <div className="wave-tag b">
             <span className="dot" />
             B

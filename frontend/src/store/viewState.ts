@@ -8,7 +8,7 @@ export interface ViewState {
   secPerPx: number;
   scroll: number;
   offsetB: number;
-  linked: boolean;
+  locked: boolean;
   playhead: number;
   regionA: [number, number] | null;
   loop: { enabled: boolean };
@@ -26,7 +26,7 @@ const DEFAULT: ViewState = {
   secPerPx: 0.062,
   scroll: 0,
   offsetB: 0,
-  linked: false,
+  locked: false,
   playhead: 0,
   regionA: null,
   loop: { enabled: false },
