@@ -254,7 +254,7 @@ export function Library() {
       <div className="header">
         <div className="brand">
           <div className="brand-mark" />
-          <span className="brand-name">CohereMix</span>
+          <span className="brand-name">CoheMix</span>
         </div>
         <div className="header-spacer" />
         <button

@@ -64,7 +64,7 @@ export function Header({ compId, mixPayload, refPayload, onSwapped }: Props) {
       {/* brand */}
       <div className="brand">
         <div className="brand-mark" />
-        <span className="brand-name">CohereMix</span>
+        <span className="brand-name">CoheMix</span>
       </div>
 
       {/* readout pills */}
