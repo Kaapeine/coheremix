@@ -73,9 +73,37 @@ export function useAudioEngine({ compId, mix, ref, playing, setPlaying }: Args):
   useEffect(() => {
     const engine = engineRef.current;
     if (!engine || !readyRef.current) return;
-    if (playing) engine.resume();
-    else engine.pause();
+    if (playing) {
+      const s = storeRef.current;
+      if (s.loop.enabled) {
+        const [start, end] = s.regionA ?? [0, s.duration];
+        const p = engine.time();
+        if (p < start || p >= end) {
+          engine.seek(start);
+          s.set({ playhead: start });
+        }
+      }
+      engine.resume();
+    } else {
+      engine.pause();
+    }
   }, [playing]);
+
+  // Turning loop on mid-playback snaps into the loop range immediately,
+  // instead of waiting for natural playback to reach the region end.
+  useEffect(() => {
+    if (!store.loop.enabled || !playing) return;
+    const engine = engineRef.current;
+    if (!engine || !readyRef.current) return;
+    const s = storeRef.current;
+    const [start, end] = s.regionA ?? [0, s.duration];
+    const p = engine.time();
+    if (p < start || p >= end) {
+      engine.play(start);
+      s.set({ playhead: start });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [store.loop.enabled]);
 
   // Push reactive params into the engine.
   useEffect(() => {
@@ -97,9 +125,12 @@ export function useAudioEngine({ compId, mix, ref, playing, setPlaying }: Args):
       const s = storeRef.current;
       if (engine) {
         let p = engine.time();
-        if (s.loop.enabled && s.regionA && p >= s.regionA[1]) {
-          p = s.regionA[0];
-          engine.play(p);
+        if (s.loop.enabled) {
+          const [start, end] = s.regionA ?? [0, s.duration];
+          if (p >= end) {
+            p = start;
+            engine.play(p);
+          }
         }
         if (p >= s.duration) {
           engine.pause();
