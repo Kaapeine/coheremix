@@ -165,6 +165,72 @@ export function SpectrumBody({ mix, ref }: BodyProps) {
   return <canvas ref={canvasRef} style={{ width: "100%", height: "100%", display: "block" }} />;
 }
 
+function Scope({ role, color }: { role: "mix" | "reference"; color: string }) {
+  const canvasRef = useRef<HTMLCanvasElement | null>(null);
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const stroke = getComputedStyle(document.documentElement).getPropertyValue(color).trim();
+    const FRAME_MS = 1000 / 18; // throttled redraw rate (display refresh is much faster than ear-useful here)
+    let raf = 0;
+    let last = 0;
+    const draw = (now: number) => {
+      raf = requestAnimationFrame(draw);
+      if (now - last < FRAME_MS) return;
+      last = now;
+      const r = canvas.parentElement!.getBoundingClientRect();
+      const dpr = Math.min(2, window.devicePixelRatio || 1);
+      const size = Math.max(1, Math.floor(Math.min(r.width, r.height)));
+      if (canvas.width !== size * dpr || canvas.height !== size * dpr) {
+        canvas.width = size * dpr; canvas.height = size * dpr;
+        canvas.style.width = `${size}px`; canvas.style.height = `${size}px`;
+      }
+      const ctx = canvas.getContext("2d")!;
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      // phosphor fade: paint translucent black over the previous frame
+      ctx.fillStyle = "rgba(8,7,5,0.22)";
+      ctx.fillRect(0, 0, size, size);
+      // guide lines through center: vertical, horizontal, both diagonals
+      ctx.strokeStyle = "rgba(255,255,255,0.08)"; ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.moveTo(size / 2 + 0.5, 0); ctx.lineTo(size / 2 + 0.5, size);
+      ctx.moveTo(0, size / 2 + 0.5); ctx.lineTo(size, size / 2 + 0.5);
+      ctx.moveTo(0, 0); ctx.lineTo(size, size);
+      ctx.moveTo(size, 0); ctx.lineTo(0, size);
+      ctx.stroke();
+      const an = audioTap.stereo(role);
+      if (an) {
+        const N = an.l.fftSize;
+        const L = new Float32Array(N), Rr = new Float32Array(N);
+        an.l.getFloatTimeDomainData(L);
+        an.r.getFloatTimeDomainData(Rr);
+        const cx = size / 2, cy = size / 2, scale = size * 0.46;
+        ctx.strokeStyle = stroke; ctx.globalAlpha = 0.8; ctx.lineWidth = 1;
+        ctx.beginPath();
+        for (let i = 0; i < N; i++) {
+          const x = cx + ((L[i] - Rr[i]) / Math.SQRT2) * scale;
+          const y = cy - ((L[i] + Rr[i]) / Math.SQRT2) * scale;
+          if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+        }
+        ctx.stroke();
+        ctx.globalAlpha = 1;
+      }
+    };
+    raf = requestAnimationFrame(draw);
+    return () => cancelAnimationFrame(raf);
+  }, [role, color]);
+  return <canvas ref={canvasRef} className="gonio-scope" />;
+}
+
+export function GoniometerBody() {
+  return (
+    <div className="gonio-wrap">
+      <div className="gonio-cell"><span className="gonio-tag a">A</span><Scope role="mix" color="--a" /></div>
+      <div className="gonio-cell"><span className="gonio-tag b">B</span><Scope role="reference" color="--b" /></div>
+    </div>
+  );
+}
+
 export function TilesBody({ mix, ref }: BodyProps) {
   const { regionA, offsetB } = useViewState();
   const [t0, t1] = regionA ?? [0, mix.meta.duration];

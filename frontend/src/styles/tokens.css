@@ -432,6 +432,13 @@ html, body {
 .corr-needle.a { background: var(--a); } .corr-needle.b { background: var(--b); }
 .corr-axis { display:flex; justify-content:space-between; font-size:8.5px; color:var(--tx-3); font-family:var(--mono); }
 
+/* goniometer */
+.gonio-wrap { display: grid; grid-template-columns: 1fr 1fr; grid-template-rows: minmax(0, 1fr); gap: 10px; flex: 1; min-height: 0; padding: 8px 10px; }
+.gonio-cell { position: relative; min-height: 0; display: flex; align-items: center; justify-content: center; background: var(--bg); border: 1px solid var(--line); border-radius: var(--radius-sm); overflow: hidden; }
+.gonio-scope { display: block; }
+.gonio-tag { position: absolute; top: 6px; left: 8px; font-size: 10px; font-family: var(--mono); letter-spacing: .08em; }
+.gonio-tag.a { color: var(--a); } .gonio-tag.b { color: var(--b); }
+
 /* generic empty state */
 .empty-slot { flex:1; display:grid; place-items:center; color: var(--tx-3); font-size: 12px; }
 
