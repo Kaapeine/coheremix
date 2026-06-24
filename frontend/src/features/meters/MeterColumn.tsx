@@ -3,6 +3,7 @@ import { Icon } from "../../components/Icon";
 import { useViewState } from "../../store/viewState";
 import type { TrackPayload } from "../../types/payload";
 import { LufsMeter, TruePeakMeter, MeterPlaceholder } from "./meters";
+import { CorrelationMeter, BalanceMeter } from "./spatialMeters";
 
 const METERS: Record<string, string> = {
   lufs: "LUFS",
@@ -69,11 +70,12 @@ function MeterSlot({ id, taken, mix, ref, onChange }: MeterSlotProps) {
           <LufsMeter mix={mix} ref={ref} />
         ) : id === "truepeak" ? (
           <TruePeakMeter mix={mix} ref={ref} />
+        ) : id === "correlation" ? (
+          <CorrelationMeter mix={mix} ref={ref} />
+        ) : id === "balance" ? (
+          <BalanceMeter mix={mix} ref={ref} />
         ) : (
-          <MeterPlaceholder
-            title={METERS[id]}
-            phase={id === "correlation" || id === "balance" ? "Phase 3" : "a later phase"}
-          />
+          <MeterPlaceholder title={METERS[id]} phase="a later phase" />
         )}
       </div>
     </div>
