@@ -4,7 +4,7 @@ import { Icon } from "../../components/Icon";
 import { useViewState } from "../../store/viewState";
 import type { TrackPayload } from "../../types/payload";
 import {
-  ShortTermLufsBody, CrestBody, TilesBody, SummaryBody, LtasBody, BandDeltaBody, SpectrumBody, PlaceholderBody, TimeOverlay,
+  ShortTermLufsBody, CrestBody, TilesBody, SummaryBody, LtasBody, BandDeltaBody, SpectrumBody, CorrelationBody, PlaceholderBody, TimeOverlay,
 } from "./bodies";
 
 const VIEWS: Record<string, { title: string; sub: string; family: string; kind: string }> = {
@@ -13,7 +13,7 @@ const VIEWS: Record<string, { title: string; sub: string; family: string; kind: 
   ltas:          { title: "LTAS — tonal balance", sub: "long-term average spectrum", family: "Frequency", kind: "freq" },
   liveSpectrum:  { title: "Live spectrum", sub: "real-time · holds on pause", family: "Frequency", kind: "freq" },
   bandDelta:     { title: "Band-energy delta", sub: "A relative to B · whole file", family: "Frequency", kind: "freq" },
-  correlation:   { title: "Phase correlation", sub: "mono-compatibility", family: "Stereo", kind: "soon" },
+  correlation:   { title: "Phase correlation", sub: "mono-compatibility", family: "Stereo", kind: "time" },
   goniometer:    { title: "Goniometer", sub: "A / B side-by-side", family: "Stereo", kind: "soon" },
   spectrogram:   { title: "Spectrogram", sub: "A-row over B-row", family: "Spectrogram", kind: "soon" },
   tiles:         { title: "Region readout", sub: "matched aggregates", family: "Summary", kind: "tiles" },
@@ -21,7 +21,7 @@ const VIEWS: Record<string, { title: string; sub: string; family: string; kind: 
 };
 
 const PHASE_FOR: Record<string, string> = {
-  correlation: "Phase 3", goniometer: "Phase 3", spectrogram: "Phase 5",
+  goniometer: "Phase 3", spectrogram: "Phase 5",
 };
 
 const FAMILY_ORDER = ["Loudness", "Frequency", "Stereo", "Spectrogram", "Summary"];
@@ -89,6 +89,8 @@ function Panel({ id, idx, count, mix, ref, onChange, onMove, onClose }: PanelPro
     body = <BandDeltaBody mix={mix} ref={ref} />;
   } else if (id === "liveSpectrum") {
     body = <SpectrumBody mix={mix} ref={ref} />;
+  } else if (id === "correlation") {
+    body = <CorrelationBody mix={mix} ref={ref} />;
   } else {
     body = <PlaceholderBody title={v.title} phase={PHASE_FOR[id] ?? "a later phase"} />;
   }

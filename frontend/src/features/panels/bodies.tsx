@@ -54,6 +54,19 @@ export function CrestBody({ mix, ref }: BodyProps) {
   return <canvas ref={cref} style={{ width: "100%", height: "100%", display: "block" }} />;
 }
 
+export function CorrelationBody({ mix, ref }: BodyProps) {
+  const { secPerPx, scroll, offsetB } = useViewState();
+  const cref = useCanvasDraw(
+    (cv) =>
+      valueLane(cv, mix, ref, { secPerPx, scroll, offsetB, momentary: false }, {
+        lo: -1, hi: 1, key: "correlation", ticks: [-1, -0.5, 0, 0.5, 1],
+        redBelow: 0, fmt: (v) => v.toFixed(1),
+      }),
+    [secPerPx, scroll, offsetB, mix, ref],
+  );
+  return <canvas ref={cref} style={{ width: "100%", height: "100%", display: "block" }} />;
+}
+
 export function LtasBody({ mix, ref }: BodyProps) {
   const cref = useCanvasDraw((cv) => ltasCurve(cv, mix, ref), [mix, ref]);
   return <canvas ref={cref} style={{ width: "100%", height: "100%", display: "block" }} />;
@@ -155,7 +168,7 @@ export function SpectrumBody({ mix, ref }: BodyProps) {
 export function TilesBody({ mix, ref }: BodyProps) {
   const { regionA, offsetB } = useViewState();
   const [t0, t1] = regionA ?? [0, mix.meta.duration];
-  const off = offsetB;
+  const off = -offsetB;
   const iA = regionA ? R.regionIntegrated(mix, t0, t1) : mix.static.integrated;
   const iB = regionA ? R.regionIntegrated(ref, t0 + off, t1 + off) : ref.static.integrated;
   const tpA = regionA ? R.max(mix, "truePeak", t0, t1) : mix.static.truePeakMax;

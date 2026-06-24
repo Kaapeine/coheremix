@@ -66,9 +66,9 @@ function VBar({
 export function LufsMeter({ mix, ref }: MeterProps) {
   const { playhead: t, offsetB } = useViewState();
   const stA = R.winMean(mix, "shortTermLUFS", t, 3);
-  const stB = R.winMean(ref, "shortTermLUFS", t + offsetB, 3);
+  const stB = R.winMean(ref, "shortTermLUFS", t - offsetB, 3);
   const moA = R.winMean(mix, "momentaryLUFS", t, 0.4);
-  const moB = R.winMean(ref, "momentaryLUFS", t + offsetB, 0.4);
+  const moB = R.winMean(ref, "momentaryLUFS", t - offsetB, 0.4);
   return (
     <div style={{ display: "flex", flexDirection: "column", flex: 1, minHeight: 0 }}>
       <div className="meter-sublabel">Short-term LUFS</div>
@@ -84,8 +84,8 @@ export function LufsMeter({ mix, ref }: MeterProps) {
 
 export function TruePeakMeter({ mix, ref }: MeterProps) {
   const { playhead, offsetB } = useViewState();
-  const tpA = R.at(mix, "truePeak", Math.max(0, playhead));
-  const tpB = R.at(ref, "truePeak", Math.max(0, playhead + offsetB));
+  const tpA = R.at(mix, "truePeak", Math.max(0, playhead)) ?? -120;
+  const tpB = R.at(ref, "truePeak", Math.max(0, playhead - offsetB)) ?? -120;
   const overA = tpA > -1, overB = tpB > -1;
   return (
     <div style={{ display: "flex", flexDirection: "column", flex: 1, minHeight: 0 }}>

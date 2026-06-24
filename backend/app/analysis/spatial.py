@@ -14,10 +14,17 @@ def _block_count(n_samples: int, hop: int) -> int:
     return n_samples // hop
 
 
+_SILENCE_MSQ = 1e-6  # ~ -60 dBFS mean-square; below this, ratios are noise-floor and unstable
+
+
 def correlation_series(
     pcm: np.ndarray, sample_rate: int, hop_s: float = 0.1, win_s: float = 0.3
 ) -> np.ndarray:
-    """Normalised L/R cross-correlation over a trailing ~win_s window, -1..1."""
+    """Normalised L/R cross-correlation over a trailing ~win_s window, -1..1.
+
+    Near-silent windows are NaN (undefined) rather than normalising
+    noise-floor energy, which produces an unstable ratio.
+    """
     L = pcm[0].astype(np.float64)
     R = pcm[1].astype(np.float64)
     hop = int(round(hop_s * sample_rate))
@@ -33,19 +40,24 @@ def correlation_series(
     cRR = np.concatenate([[0.0], np.cumsum(sRR)])
     cLR = np.concatenate([[0.0], np.cumsum(sLR)])
     win_blocks = max(1, int(round(win_s / hop_s)))
-    out = np.zeros(n)
+    out = np.full(n, np.nan)
     for i in range(n):
         lo = max(0, i - win_blocks + 1)
+        nsamp = (i - lo + 1) * hop
         ll = cLL[i + 1] - cLL[lo]
         rr = cRR[i + 1] - cRR[lo]
         lr = cLR[i + 1] - cLR[lo]
-        d = np.sqrt(ll * rr)
-        out[i] = lr / d if d > 0 else 0.0
+        if ll / nsamp > _SILENCE_MSQ and rr / nsamp > _SILENCE_MSQ:
+            out[i] = lr / np.sqrt(ll * rr)
     return out
 
 
 def ms_ratio_series(pcm: np.ndarray, sample_rate: int, hop_s: float = 0.1) -> np.ndarray:
-    """Side/Mid energy ratio per block (0 = mono, larger = wider)."""
+    """Side/Mid energy ratio per block (0 = mono, larger = wider).
+
+    Near-silent blocks are NaN (undefined) rather than taking a ratio of
+    noise-floor energy, which is unstable.
+    """
     M = (pcm[0] + pcm[1]) * 0.5
     S = (pcm[0] - pcm[1]) * 0.5
     hop = int(round(hop_s * sample_rate))
@@ -54,18 +66,28 @@ def ms_ratio_series(pcm: np.ndarray, sample_rate: int, hop_s: float = 0.1) -> np
         return np.zeros(0)
     Me = (M[: n * hop].astype(np.float64) ** 2).reshape(n, hop).mean(axis=1)
     Se = (S[: n * hop].astype(np.float64) ** 2).reshape(n, hop).mean(axis=1)
-    return np.where(Me > 0, Se / Me, 0.0)
+    out = np.full(n, np.nan)
+    valid = Me > _SILENCE_MSQ
+    out[valid] = Se[valid] / Me[valid]
+    return out
 
 
 def balance_series(pcm: np.ndarray, sample_rate: int, hop_s: float = 0.1) -> np.ndarray:
-    """L/R balance in dB per block; positive = right louder."""
+    """L/R balance in dB per block; positive = right louder.
+
+    Near-silent blocks are NaN (undefined) rather than taking a dB ratio of
+    noise-floor energy, which is unstable.
+    """
     hop = int(round(hop_s * sample_rate))
     n = _block_count(pcm.shape[1], hop)
     if n == 0:
         return np.zeros(0)
     Le = (pcm[0][: n * hop].astype(np.float64) ** 2).reshape(n, hop).mean(axis=1)
     Re = (pcm[1][: n * hop].astype(np.float64) ** 2).reshape(n, hop).mean(axis=1)
-    return np.where((Le > 0) & (Re > 0), 10.0 * np.log10(Re / Le), 0.0)
+    out = np.full(n, np.nan)
+    valid = (Le > _SILENCE_MSQ) & (Re > _SILENCE_MSQ)
+    out[valid] = 10.0 * np.log10(Re[valid] / Le[valid])
+    return out
 
 
 def width_per_band(
@@ -92,14 +114,18 @@ def compute_substrate3(pcm: np.ndarray, sample_rate: int, hop_s: float = 0.1) ->
     ms = ms_ratio_series(pcm, sample_rate, hop_s)
     bal = balance_series(pcm, sample_rate, hop_s)
 
-    def _l(a: np.ndarray) -> list[float]:
-        return [round(float(x), 3) for x in a]
+    def _l(a: np.ndarray) -> list[float | None]:
+        return [None if np.isnan(x) else round(float(x), 3) for x in a]
+
+    def _nanmedian(a: np.ndarray, ndigits: int) -> float:
+        valid = a[~np.isnan(a)]
+        return round(float(np.nanmedian(valid)), ndigits) if valid.size else 0.0
 
     return {
         "features": {"correlation": _l(corr), "msRatio": _l(ms), "balance": _l(bal)},
         "static": {
-            "avgCorrelation": round(float(np.median(corr)) if corr.size else 0.0, 2),
-            "msRatioAvg": round(float(np.median(ms)) if ms.size else 0.0, 3),
+            "avgCorrelation": _nanmedian(corr, 2),
+            "msRatioAvg": _nanmedian(ms, 3),
             "widthPerBand": width_per_band(pcm, sample_rate),
         },
     }

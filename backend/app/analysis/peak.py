@@ -32,12 +32,17 @@ def true_peak_series(
         return np.where(peaks > 0, 20.0 * np.log10(peaks), -120.0)
 
 
+_SILENCE_MSQ = 1e-6  # ~ -60 dBFS mean-square; below this, peak/RMS is noise-floor and unstable
+
+
 def crest_series(
     pcm: np.ndarray, sample_rate: int, hop_s: float = 0.1, win_s: float = 1.0
 ) -> np.ndarray:
     """Windowed crest factor (dB) = peak_dB - RMS_dB over a trailing window.
 
     Output length = number of hops. Uses linear (un-weighted) samples.
+    Near-silent windows are NaN (undefined) rather than computing peak/RMS on
+    noise-floor energy, which produces unstable (often extreme) ratios.
     """
     hop = int(round(hop_s * sample_rate))
     win_blocks = max(1, int(round(win_s / hop_s)))
@@ -50,10 +55,11 @@ def crest_series(
     abs_blocks = mono_abs[: n_hops * hop].reshape(n_hops, hop)
     block_msq = sq_blocks.mean(axis=1)
     block_peak = abs_blocks.max(axis=1)
-    out = np.zeros(n_hops)
+    out = np.full(n_hops, np.nan)
     for i in range(n_hops):
         lo = max(0, i - win_blocks + 1)
-        rms = np.sqrt(block_msq[lo : i + 1].mean())
+        msq = block_msq[lo : i + 1].mean()
         pk = block_peak[lo : i + 1].max()
-        out[i] = 20.0 * np.log10(pk / rms) if rms > 0 and pk > 0 else 0.0
+        if msq > _SILENCE_MSQ and pk > 0:
+            out[i] = 20.0 * np.log10(pk / np.sqrt(msq))
     return out

@@ -26,16 +26,18 @@ export interface Ltas {
   bins: number;
 }
 
+/** `null` entries mark a gated/undefined sample (e.g. analysed-as-silent) —
+ * renderers should skip them (gap in the line) rather than treat them as 0. */
 export interface Features {
-  shortTermLUFS: number[];
-  momentaryLUFS: number[];
-  crest: number[];
-  truePeak: number[];
-  centroid?: number[];     // P2
-  correlation?: number[];  // P3
-  msRatio?: number[];      // P3
-  balance?: number[];      // P3
-  [key: string]: number[] | undefined;
+  shortTermLUFS: (number | null)[];
+  momentaryLUFS: (number | null)[];
+  crest: (number | null)[];
+  truePeak: (number | null)[];
+  centroid?: (number | null)[];     // P2
+  correlation?: (number | null)[];  // P3
+  msRatio?: (number | null)[];      // P3
+  balance?: (number | null)[];      // P3
+  [key: string]: (number | null)[] | undefined;
 }
 
 export interface StaticAggregates {

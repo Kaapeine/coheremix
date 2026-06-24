@@ -80,8 +80,10 @@ export function lufsLane(canvas: HTMLCanvasElement, A: TrackPayload, B: TrackPay
     let started = false, firstX = padL, lastX = padL;
     for (let x = padL; x < w; x++) {
       const t = tm.tOf(x) + off;
-      if (t < 0 || t > track.meta.duration) continue;
-      const y = yOf(R.at(track, key, t));
+      if (t < 0 || t > track.meta.duration) { started = false; continue; }
+      const raw = R.at(track, key, t);
+      if (raw == null) { started = false; continue; }
+      const y = yOf(raw);
       if (!started) { ctx.moveTo(x, y); started = true; firstX = x; } else ctx.lineTo(x, y);
       lastX = x;
     }
@@ -94,10 +96,10 @@ export function lufsLane(canvas: HTMLCanvasElement, A: TrackPayload, B: TrackPay
   };
   if (view.momentary) {
     drawLine(A, 0, a, "momentaryLUFS", 0.28, false);
-    drawLine(B, view.offsetB, b, "momentaryLUFS", 0.28, false);
+    drawLine(B, -view.offsetB, b, "momentaryLUFS", 0.28, false);
   }
   drawLine(A, 0, a, "shortTermLUFS", 0.95, true);
-  drawLine(B, view.offsetB, b, "shortTermLUFS", 0.95, true);
+  drawLine(B, -view.offsetB, b, "shortTermLUFS", 0.95, true);
 }
 
 interface ValueCfg {
@@ -112,10 +114,12 @@ export function valueLane(canvas: HTMLCanvasElement, A: TrackPayload, B: TrackPa
   const padL = GUTTER;
   const tm = timeMap(view, w, padL);
   const { lo, hi, key, redBelow } = cfg;
-  const yOf = (v: number) => h - ((v - lo) / (hi - lo)) * h;
+  const padT = 10, padB = 16;
+  const plotH = h - padT - padB;
+  const yOf = (v: number) => padT + plotH - ((v - lo) / (hi - lo)) * plotH;
   if (redBelow !== undefined) {
     const yr = yOf(redBelow);
-    ctx.fillStyle = warn; ctx.globalAlpha = 0.07; ctx.fillRect(padL, yr, w - padL, h - yr); ctx.globalAlpha = 1;
+    ctx.fillStyle = warn; ctx.globalAlpha = 0.07; ctx.fillRect(padL, yr, w - padL, h - padB - yr); ctx.globalAlpha = 1;
   }
   ctx.font = '9px "JetBrains Mono", monospace';
   for (const v of cfg.ticks) {
@@ -127,13 +131,15 @@ export function valueLane(canvas: HTMLCanvasElement, A: TrackPayload, B: TrackPa
     ctx.beginPath(); let started = false;
     for (let x = padL; x < w; x++) {
       const t = tm.tOf(x) + off;
-      if (t < 0 || t > track.meta.duration) continue;
-      const v = Math.max(lo, Math.min(hi, R.at(track, key, t)));
+      if (t < 0 || t > track.meta.duration) { started = false; continue; }
+      const raw = R.at(track, key, t);
+      if (raw == null) { started = false; continue; }
+      const v = Math.max(lo, Math.min(hi, raw));
       const y = yOf(v); if (!started) { ctx.moveTo(x, y); started = true; } else ctx.lineTo(x, y);
     }
     ctx.strokeStyle = color; ctx.lineWidth = 1.6; ctx.lineJoin = "round"; ctx.stroke();
   };
-  draw(A, 0, a); draw(B, view.offsetB, b);
+  draw(A, 0, a); draw(B, -view.offsetB, b);
 }
 
 const F_LO = 20, F_HI = 20000;

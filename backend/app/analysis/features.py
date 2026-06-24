@@ -5,8 +5,8 @@ import numpy as np
 from app.analysis import loudness, peak
 
 
-def _to_list(arr: np.ndarray) -> list[float]:
-    return [round(float(x), 3) for x in arr]
+def _to_list(arr: np.ndarray) -> list[float | None]:
+    return [None if np.isnan(x) else round(float(x), 3) for x in arr]
 
 
 def compute_substrate1(
@@ -29,7 +29,8 @@ def compute_substrate1(
 
     tp_max = peak.true_peak_max(pcm, sample_rate)
     lra = loudness.loudness_range(st)
-    crest_avg = float(round(np.median(crest[10:]) if crest.shape[0] > 10 else (crest.mean() if crest.size else 0.0), 1))
+    crest_valid = crest[~np.isnan(crest)]
+    crest_avg = float(round(np.median(crest_valid), 1)) if crest_valid.size else 0.0
 
     return {
         "features": {

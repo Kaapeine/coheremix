@@ -1,33 +1,45 @@
 import type { TrackPayload } from "../../types/payload";
 
-/** Value of a feature at A-time t (s), linear-interpolated. */
-export function at(track: TrackPayload, key: string, t: number): number {
+/** Value of a feature at A-time t (s), linear-interpolated. Returns null where
+ * the underlying sample(s) are gated out (e.g. analysed-as-silent) — callers
+ * that render a line should treat null as a gap, not a value. */
+export function at(track: TrackPayload, key: string, t: number): number | null {
   const arr = track.features[key];
-  if (!arr || arr.length === 0) return 0;
+  if (!arr || arr.length === 0) return null;
   const x = t / track.hop;
   const i = Math.max(0, Math.min(arr.length - 1, Math.floor(x)));
   const j = Math.min(arr.length - 1, i + 1);
-  const f = x - i;
-  return arr[i] * (1 - f) + arr[j] * f;
+  const f = Math.max(0, Math.min(1, x - i));
+  const vi = arr[i], vj = arr[j];
+  if (vi == null || vj == null) return null;
+  return vi * (1 - f) + vj * f;
 }
 
+/** Mean over [t0,t1], ignoring gated/null samples. */
 export function mean(track: TrackPayload, key: string, t0: number, t1: number): number {
   const arr = track.features[key];
   if (!arr || arr.length === 0) return 0;
   const i0 = Math.max(0, Math.floor(t0 / track.hop));
   const i1 = Math.min(arr.length - 1, Math.ceil(t1 / track.hop));
   let s = 0, c = 0;
-  for (let i = i0; i <= i1; i++) { s += arr[i]; c++; }
-  return c ? s / c : arr[0];
+  for (let i = i0; i <= i1; i++) {
+    const v = arr[i];
+    if (v != null) { s += v; c++; }
+  }
+  return c ? s / c : 0;
 }
 
+/** Max over [t0,t1], ignoring gated/null samples. */
 export function max(track: TrackPayload, key: string, t0: number, t1: number): number {
   const arr = track.features[key];
   if (!arr || arr.length === 0) return -Infinity;
   const i0 = Math.max(0, Math.floor(t0 / track.hop));
   const i1 = Math.min(arr.length - 1, Math.ceil(t1 / track.hop));
   let m = -Infinity;
-  for (let i = i0; i <= i1; i++) m = Math.max(m, arr[i]);
+  for (let i = i0; i <= i1; i++) {
+    const v = arr[i];
+    if (v != null) m = Math.max(m, v);
+  }
   return m;
 }
 
