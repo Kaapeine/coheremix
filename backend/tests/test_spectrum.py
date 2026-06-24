@@ -37,7 +37,6 @@ def test_compute_substrate2_payload_shape():
     pcm = _sine(sr, 3.0, 1000.0, 0.4)
     out = spectrum.compute_substrate2(pcm, sr, hop_s=0.1)
     assert set(out["ltas"]) == {"freqs", "db", "bins"}
-    assert "centroid" in out["features"]
-    assert len(out["features"]["centroid"]) >= 1
+    assert out["features"] == {}
     for key in ("centroidAvg", "tilt"):
         assert key in out["static"]

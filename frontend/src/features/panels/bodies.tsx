@@ -192,6 +192,8 @@ export function SummaryBody({ mix, ref }: BodyProps) {
     ["LRA", mix.static.lra, ref.static.lra, "LU"],
     ["True-peak max", mix.static.truePeakMax, ref.static.truePeakMax, "dBTP"],
     ["PLR", mix.static.plr, ref.static.plr, "dB"],
+    ["Centroid", mix.static.centroidAvg ?? 0, ref.static.centroidAvg ?? 0, "Hz"],
+    ["Tilt", mix.static.tilt ?? 0, ref.static.tilt ?? 0, "dB/oct"],
   ];
   return (
     <div style={{ flex: 1 }}>

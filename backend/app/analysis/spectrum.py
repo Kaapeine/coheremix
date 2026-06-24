@@ -85,7 +85,11 @@ def centroid_series(
     freqs: np.ndarray, frames: np.ndarray, sample_rate: int,
     fft: int = _FFT, hop: int = _HOP, hop_s: float = 0.1,
 ) -> np.ndarray:
-    """Spectral centroid (Hz) per STFT frame, averaged onto a `hop_s` grid."""
+    """Spectral centroid (Hz) per STFT frame, averaged onto a `hop_s` grid.
+
+    Not currently called by compute_substrate2 — no panel plots a centroid time
+    series yet. Kept for a future centroid lane.
+    """
     if frames.shape[0] == 0:
         return np.zeros(0)
     denom = frames.sum(axis=1)
@@ -111,14 +115,19 @@ def spectral_tilt(ltas_dict: dict) -> float:
 
 
 def compute_substrate2(pcm: np.ndarray, sample_rate: int, hop_s: float = 0.1) -> dict:
-    """Substrate-2 (frequency family): LTAS curve, centroid series, tilt."""
+    """Substrate-2 (frequency family): LTAS curve + tilt, plus a single
+    whole-file centroid average. No per-frame centroid series is computed."""
     freqs, frames = stft_mag(pcm, sample_rate)
     lt = ltas(freqs, frames)
-    cen = centroid_series(freqs, frames, sample_rate, hop_s=hop_s)
-    cen_pos = cen[cen > 0]
-    cen_avg = float(round(np.median(cen_pos) if cen_pos.size else 0.0, 0))
+    if frames.shape[0] > 0:
+        denom = frames.sum(axis=1)
+        cen = np.where(denom > 0, (frames * freqs).sum(axis=1) / denom, 0.0)
+        cen_pos = cen[cen > 0]
+        cen_avg = float(round(np.median(cen_pos) if cen_pos.size else 0.0, 0))
+    else:
+        cen_avg = 0.0
     return {
         "ltas": lt,
-        "features": {"centroid": [round(float(x), 1) for x in cen]},
+        "features": {},
         "static": {"centroidAvg": cen_avg, "tilt": spectral_tilt(lt)},
     }
