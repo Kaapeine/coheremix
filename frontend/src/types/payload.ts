@@ -31,8 +31,10 @@ export interface Features {
   momentaryLUFS: number[];
   crest: number[];
   truePeak: number[];
-  centroid?: number[]; // P2
-  // P3: correlation, msRatio, balance
+  centroid?: number[];     // P2
+  correlation?: number[];  // P3
+  msRatio?: number[];      // P3
+  balance?: number[];      // P3
   [key: string]: number[] | undefined;
 }
 
@@ -42,9 +44,11 @@ export interface StaticAggregates {
   truePeakMax: number;
   plr: number;
   crestAvg: number;
-  centroidAvg?: number; // P2
-  tilt?: number;        // P2
+  centroidAvg?: number;    // P2
+  tilt?: number;           // P2
   avgCorrelation?: number; // P3
+  msRatioAvg?: number;     // P3
+  widthPerBand?: number[]; // P3, 7 bands
 }
 
 export interface TrackPayload {
