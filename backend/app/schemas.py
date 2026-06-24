@@ -35,7 +35,7 @@ class TrackPayload(BaseModel):
     meta: Meta
     gainMatch: GainMatch
     hop: float = 0.1
-    features: dict[str, list[float]] = {}  # shortTermLUFS, momentaryLUFS, correlation, crest, truePeak, centroid, msRatio
+    features: dict[str, list[float]] = {}  # shortTermLUFS, momentaryLUFS, correlation, crest, truePeak, centroid, sideMidRatio
     ltas: dict | None = None               # {freqs, db, bins} — long-term average spectrum, pre-computed
     spectrogram: dict | None = None        # {bins, cols, data} — uint8 heatmap, pre-computed; rendered as WebGL texture
     waveform: Waveform                     # mipmap pyramid: z256/z512/z1024/z2048/z4096 — renderer picks closest to canvas px width

@@ -342,8 +342,8 @@ html, body {
 }
 .ptool:hover { color: var(--tx-1); background: var(--surface-2); }
 .ptool svg { width: 14px; height: 14px; }
-.panel-body { position: relative; flex: 1; min-height: 0; }
-.panel-body canvas { display:block; width:100%; height:100%; max-width:100%; position:absolute; inset:0; }
+.panel-body { position: relative; flex: 1; min-height: 0; display: flex; flex-direction: column; }
+.panel-body > canvas { display:block; width:100%; height:100%; max-width:100%; position:absolute; inset:0; }
 
 .add-panel {
   display: flex; align-items: center; gap: 7px; height: 26px; padding: 0 11px; white-space: nowrap;

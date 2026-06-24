@@ -232,3 +232,25 @@ export function bandDelta(canvas: HTMLCanvasElement, A: TrackPayload, B: TrackPa
   }
   ctx.textAlign = "left";
 }
+
+/** Per-band width: paired A/B bars (height ∝ S/M ratio) across the 7 bands. */
+export function bandBars(canvas: HTMLCanvasElement, A: TrackPayload, B: TrackPayload) {
+  const s = setup(canvas); if (!s.ok) return; const { ctx, w, h } = s;
+  const a = css("--a"), b = css("--b"), tx3 = css("--tx-3");
+  const wbA = A.static.widthPerBand ?? [], wbB = B.static.widthPerBand ?? [];
+  const n = R.BAND_EDGES.length;
+  const slot = w / n;
+  const hi = Math.max(0.6, ...wbA, ...wbB); // dynamic full-scale
+  const base = h - 14;
+  ctx.font = '9px "JetBrains Mono", monospace'; ctx.textAlign = "center";
+  for (let i = 0; i < n; i++) {
+    const vA = wbA[i] ?? 0, vB = wbB[i] ?? 0;
+    const hA = (Math.min(hi, vA) / hi) * (base - 4);
+    const hB = (Math.min(hi, vB) / hi) * (base - 4);
+    const x = i * slot;
+    ctx.fillStyle = a; ctx.fillRect(x + slot * 0.18, base - hA, slot * 0.28, hA);
+    ctx.fillStyle = b; ctx.fillRect(x + slot * 0.54, base - hB, slot * 0.28, hB);
+    ctx.fillStyle = tx3; ctx.fillText(R.BAND_EDGES[i].name, x + slot / 2, h - 3);
+  }
+  ctx.textAlign = "left";
+}

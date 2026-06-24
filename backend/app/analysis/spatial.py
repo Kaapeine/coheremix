@@ -122,10 +122,10 @@ def compute_substrate3(pcm: np.ndarray, sample_rate: int, hop_s: float = 0.1) ->
         return round(float(np.nanmedian(valid)), ndigits) if valid.size else 0.0
 
     return {
-        "features": {"correlation": _l(corr), "msRatio": _l(ms), "balance": _l(bal)},
+        "features": {"correlation": _l(corr), "sideMidRatio": _l(ms), "balance": _l(bal)},
         "static": {
             "avgCorrelation": _nanmedian(corr, 2),
-            "msRatioAvg": _nanmedian(ms, 3),
+            "sideMidRatioAvg": _nanmedian(ms, 3),
             "widthPerBand": width_per_band(pcm, sample_rate),
         },
     }

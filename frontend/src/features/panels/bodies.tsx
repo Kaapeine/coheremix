@@ -5,7 +5,7 @@ import { useEffect, useRef } from "react";
 import type { TrackPayload } from "../../types/payload";
 import { useViewState } from "../../store/viewState";
 import { useCanvasDraw } from "./useCanvasDraw";
-import { lufsLane, valueLane, ltasCurve, bandDelta } from "./draw";
+import { lufsLane, valueLane, ltasCurve, bandDelta, bandBars } from "./draw";
 import { audioTap } from "../audio/tap";
 import * as R from "../analysis/read";
 
@@ -194,6 +194,43 @@ export function TilesBody({ mix, ref }: BodyProps) {
         {tile("Integrated LUFS", iA, iB, (v) => v.toFixed(1), "LU")}
         {tile("True peak", tpA, tpB, (v) => v.toFixed(1), "dB")}
         {tile("Crest", crA, crB, (v) => v.toFixed(1), "dB")}
+      </div>
+    </div>
+  );
+}
+
+export function StereoTilesBody({ mix, ref }: BodyProps) {
+  const { regionA, offsetB } = useViewState();
+  const [t0, t1] = regionA ?? [0, mix.meta.duration];
+  const off = -offsetB;
+  const msA = regionA ? R.mean(mix, "sideMidRatio", t0, t1) : (mix.static.sideMidRatioAvg ?? 0);
+  const msB = regionA ? R.mean(ref, "sideMidRatio", t0 + off, t1 + off) : (ref.static.sideMidRatioAvg ?? 0);
+  const coA = regionA ? R.mean(mix, "correlation", t0, t1) : (mix.static.avgCorrelation ?? 0);
+  const coB = regionA ? R.mean(ref, "correlation", t0 + off, t1 + off) : (ref.static.avgCorrelation ?? 0);
+  const cref = useCanvasDraw((cv) => bandBars(cv, mix, ref), [mix, ref]);
+
+  const tile = (label: string, a: number, b: number) => (
+    <div className="tile" key={label}>
+      <span className="tile-l">{label}</span>
+      <div className="tile-vals">
+        <span className="tile-v a">{a.toFixed(2)}</span>
+        <span className="tile-v b">{b.toFixed(2)}</span>
+        <span className="tile-delta">{(a - b >= 0 ? "+" : "") + (a - b).toFixed(2)}</span>
+      </div>
+    </div>
+  );
+  return (
+    <div style={{ flex: 1, minHeight: 0, display: "flex", flexDirection: "column" }}>
+      <div className="tile-grid">
+        {tile("Side/Mid ratio", msA, msB)}
+        {tile("Avg correlation", coA, coB)}
+      </div>
+      <div style={{ height: 1, background: "var(--line)" }} />
+      <div style={{ fontSize: 10, color: "var(--tx-3)", padding: "6px 10px 2px" }}>
+        Width per band (S/M)
+      </div>
+      <div style={{ flex: 1, minHeight: 80 }}>
+        <canvas ref={cref} style={{ width: "100%", height: "100%", display: "block" }} />
       </div>
     </div>
   );

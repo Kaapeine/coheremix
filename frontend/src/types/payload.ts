@@ -35,7 +35,7 @@ export interface Features {
   truePeak: (number | null)[];
   centroid?: (number | null)[];     // P2
   correlation?: (number | null)[];  // P3
-  msRatio?: (number | null)[];      // P3
+  sideMidRatio?: (number | null)[]; // P3, Side/Mid energy ratio
   balance?: (number | null)[];      // P3
   [key: string]: (number | null)[] | undefined;
 }
@@ -49,7 +49,7 @@ export interface StaticAggregates {
   centroidAvg?: number;    // P2
   tilt?: number;           // P2
   avgCorrelation?: number; // P3
-  msRatioAvg?: number;     // P3
+  sideMidRatioAvg?: number; // P3
   widthPerBand?: number[]; // P3, 7 bands
 }
 

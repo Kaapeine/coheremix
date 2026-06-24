@@ -41,8 +41,8 @@ def test_compute_substrate3_payload_shape():
     sr = 48000
     pcm = _stereo(sr, 2.0, 500.0, 0.5, 0.4)
     out = spatial.compute_substrate3(pcm, sr, hop_s=0.1)
-    for key in ("correlation", "msRatio", "balance"):
+    for key in ("correlation", "sideMidRatio", "balance"):
         assert key in out["features"] and len(out["features"][key]) >= 1
-    for key in ("avgCorrelation", "msRatioAvg", "widthPerBand"):
+    for key in ("avgCorrelation", "sideMidRatioAvg", "widthPerBand"):
         assert key in out["static"]
     assert len(out["static"]["widthPerBand"]) == len(spatial.DEFAULT_BANDS)
