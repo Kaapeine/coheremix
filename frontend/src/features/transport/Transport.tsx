@@ -1,6 +1,7 @@
 import React, { useEffect, useLayoutEffect, useRef, useState } from "react";
 import type { TrackPayload } from "../../types/payload";
 import { useViewState } from "../../store/viewState";
+import { Icon } from "../../components/Icon";
 import { ABBlock } from "./ABBlock";
 import { ControlRow } from "./ControlRow";
 import { ScrollBar } from "./ScrollBar";
@@ -14,11 +15,13 @@ interface Props {
 }
 
 interface DragState {
-  mode: "region" | "alignB";
+  mode: "region" | "alignB" | "resizeStart" | "resizeEnd";
   startX: number;
   startTime: number;
   startOffset: number;
 }
+
+const MIN_REGION_WIDTH = 0.02;
 
 export function Transport({ compId, mixPayload, refPayload }: Props) {
   // Full store ref — keeps mouse/keyboard handlers out of the re-render cycle.
@@ -122,6 +125,16 @@ export function Transport({ compId, mixPayload, refPayload }: Props) {
         const t0 = Math.max(0, Math.min(drag.startTime, t));
         const t1 = Math.min(s.duration, Math.max(drag.startTime, t));
         if (t1 > t0) s.set({ regionA: [t0, t1] });
+      } else if (drag.mode === "resizeStart") {
+        if (!s.regionA) return;
+        const t = s.scroll + localX * s.secPerPx;
+        const newStart = Math.max(0, Math.min(t, s.regionA[1] - MIN_REGION_WIDTH));
+        s.set({ regionA: [newStart, s.regionA[1]] });
+      } else if (drag.mode === "resizeEnd") {
+        if (!s.regionA) return;
+        const t = s.scroll + localX * s.secPerPx;
+        const newEnd = Math.min(s.duration, Math.max(t, s.regionA[0] + MIN_REGION_WIDTH));
+        s.set({ regionA: [s.regionA[0], newEnd] });
       } else {
         const deltaT = (e.clientX - drag.startX) * s.secPerPx;
         const { min, max } = offsetBoundsRef.current;
@@ -133,7 +146,8 @@ export function Transport({ compId, mixPayload, refPayload }: Props) {
     const onUp = (e: MouseEvent) => {
       const drag = dragRef.current;
       // A click (negligible movement) on either lane seeks to that A-time.
-      if (drag && Math.abs(e.clientX - drag.startX) < 4) {
+      const isResize = drag?.mode === "resizeStart" || drag?.mode === "resizeEnd";
+      if (drag && !isResize && Math.abs(e.clientX - drag.startX) < 4) {
         seekToRef.current(drag.startTime);
       }
       dragRef.current = null;
@@ -220,7 +234,28 @@ export function Transport({ compId, mixPayload, refPayload }: Props) {
             <div
               className="region-sel"
               style={{ left: regionLeftPx, width: regionW }}
-            />
+            >
+              <button
+                className="region-handle region-handle-left"
+                onMouseDown={(e) => {
+                  e.stopPropagation();
+                  dragRef.current = { mode: "resizeStart", startX: e.clientX, startTime: 0, startOffset: 0 };
+                }}
+                title="Drag to resize loop start"
+              >
+                <Icon name="arrowLeft" size={10} />
+              </button>
+              <button
+                className="region-handle region-handle-right"
+                onMouseDown={(e) => {
+                  e.stopPropagation();
+                  dragRef.current = { mode: "resizeEnd", startX: e.clientX, startTime: 0, startOffset: 0 };
+                }}
+                title="Drag to resize loop end"
+              >
+                <Icon name="arrowRight" size={10} />
+              </button>
+            </div>
           )}
         </div>
       </div>
