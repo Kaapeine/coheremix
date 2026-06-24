@@ -3,6 +3,8 @@ import { api } from "../api/client";
 
 export type MatchMode = "integrated" | "shortterm" | "region" | "off";
 export type ViewMode = "overlaid" | "sideBySide";
+export const OCTAVE_FRACTIONS = ["1/6", "1/5", "1/4", "1/3", "1/2", "2/3", "3/4", "1"] as const;
+export type OctaveFraction = (typeof OCTAVE_FRACTIONS)[number];
 
 export interface ViewState {
   secPerPx: number;
@@ -20,6 +22,8 @@ export interface ViewState {
   duration: number;
   panels: string[];
   meterSlots: [string, string];
+  spectrumAvgMs: number;
+  spectrumOctaves: OctaveFraction;
 }
 
 const DEFAULT: ViewState = {
@@ -38,6 +42,8 @@ const DEFAULT: ViewState = {
   duration: 0,
   panels: ["shortTermLufs", "ltas", "tiles"],
   meterSlots: ["lufs", "truepeak"],
+  spectrumAvgMs: 300,
+  spectrumOctaves: "1/3",
 };
 
 const lsKey = (id: string) => `coheremix:vs:${id}`;

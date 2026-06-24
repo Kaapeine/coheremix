@@ -17,6 +17,9 @@ export const audioTap = {
   stereo(role: "mix" | "reference") {
     return current?.getStereoAnalysers(role) ?? null;
   },
+  playing(): boolean {
+    return current?.playing ?? false;
+  },
   sampleRate(): number {
     return current?.sampleRate() ?? 48000;
   },

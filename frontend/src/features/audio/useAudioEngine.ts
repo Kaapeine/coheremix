@@ -35,6 +35,10 @@ export function useAudioEngine({ compId, mix, ref, playing, setPlaying }: Args):
   // Load buffers once per comparison.
   useEffect(() => {
     const engine = new AudioEngine();
+    // Guards against React StrictMode's double-invoke: if this effect is torn
+    // down before the async load resolves, the late callback must not revive
+    // the disposed engine (e.g. re-registering it with audioTap).
+    let cancelled = false;
     engineRef.current = engine;
     readyRef.current = false;
     engine
@@ -43,6 +47,7 @@ export function useAudioEngine({ compId, mix, ref, playing, setPlaying }: Args):
         refUrl: api.audioUrl(compId, "reference"),
       })
       .then(() => {
+        if (cancelled) return;
         engine.setGainMatch(
           mix.gainMatch.offsetToCommon,
           ref.gainMatch.offsetToCommon,
@@ -60,9 +65,10 @@ export function useAudioEngine({ compId, mix, ref, playing, setPlaying }: Args):
         }
       })
       .catch(() => {
-        readyRef.current = false;
+        if (!cancelled) readyRef.current = false;
       });
     return () => {
+      cancelled = true;
       audioTap.set(null);
       engine.dispose();
       engineRef.current = null;

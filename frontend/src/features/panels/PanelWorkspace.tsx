@@ -1,7 +1,8 @@
 import type { ReactNode } from "react";
 import { Menu } from "../../components/Menu";
 import { Icon } from "../../components/Icon";
-import { useViewState } from "../../store/viewState";
+import { Knob } from "../../components/Knob";
+import { OCTAVE_FRACTIONS, useViewState } from "../../store/viewState";
 import type { TrackPayload } from "../../types/payload";
 import {
   ShortTermLufsBody, CrestBody, TilesBody, SummaryBody, LtasBody, BandDeltaBody, SpectrumBody, CorrelationBody, StereoTilesBody, GoniometerBody, PlaceholderBody, TimeOverlay,
@@ -55,6 +56,46 @@ function ViewPicker({ current, onPick, close }: ViewPickerProps) {
             ))}
         </div>
       ))}
+    </div>
+  );
+}
+
+const OCTAVE_VALUES = OCTAVE_FRACTIONS.map((f) => {
+  const [n, d] = f.split("/").map(Number);
+  return d ? n / d : n;
+});
+
+function SpectrumSettings() {
+  const spectrumAvgMs = useViewState((s) => s.spectrumAvgMs);
+  const spectrumOctaves = useViewState((s) => s.spectrumOctaves);
+  const set = useViewState((s) => s.set);
+  const octaveValue = OCTAVE_VALUES[OCTAVE_FRACTIONS.indexOf(spectrumOctaves)];
+
+  return (
+    <div className="spectrum-settings">
+      <Knob
+        value={spectrumAvgMs}
+        min={5}
+        max={10000}
+        log
+        defaultValue={300}
+        label="Averaging"
+        format={(v) => (v >= 1000 ? `${(v / 1000).toFixed(1)}s` : `${Math.round(v)}ms`)}
+        onChange={(v) => set({ spectrumAvgMs: v })}
+      />
+      <Knob
+        value={octaveValue}
+        min={OCTAVE_VALUES[0]}
+        max={OCTAVE_VALUES[OCTAVE_VALUES.length - 1]}
+        steps={OCTAVE_VALUES}
+        defaultValue={OCTAVE_VALUES[OCTAVE_FRACTIONS.indexOf("1/3")]}
+        label="Smoothing"
+        format={(v) => `${OCTAVE_FRACTIONS[OCTAVE_VALUES.indexOf(v)]} oct`}
+        onChange={(v) => {
+          const idx = OCTAVE_VALUES.indexOf(v);
+          set({ spectrumOctaves: OCTAVE_FRACTIONS[idx] });
+        }}
+      />
     </div>
   );
 }
@@ -118,6 +159,19 @@ function Panel({ id, idx, count, mix, ref, onChange, onMove, onClose }: PanelPro
         <span className="panel-sub">· {v.sub}</span>
         <span className="spacer" style={{ flex: 1 }} />
         <div className="panel-tools">
+          {id === "liveSpectrum" && (
+            <Menu
+              align="right"
+              width={150}
+              trigger={(_open, toggle) => (
+                <button className="ptool" onClick={toggle} title="Spectrum settings">
+                  <Icon name="settings" size={14} />
+                </button>
+              )}
+            >
+              <SpectrumSettings />
+            </Menu>
+          )}
           <button
             className="ptool"
             onClick={() => onMove(-1)}

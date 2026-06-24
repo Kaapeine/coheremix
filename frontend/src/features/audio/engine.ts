@@ -55,7 +55,8 @@ export class AudioEngine {
       gain.gain.value = 0;
       const analyser = ctx.createAnalyser();
       analyser.fftSize = 8192;
-      analyser.smoothingTimeConstant = 0.7;
+      // Time smoothing is done in JS (SpectrumBody) for ms-accurate, frame-rate-independent control.
+      analyser.smoothingTimeConstant = 0;
       const splitter = ctx.createChannelSplitter(2);
       const analyserL = ctx.createAnalyser();
       const analyserR = ctx.createAnalyser();

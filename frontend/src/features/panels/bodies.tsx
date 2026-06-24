@@ -79,9 +79,30 @@ export function BandDeltaBody({ mix, ref }: BodyProps) {
 
 const SPEC_F_LO = 20, SPEC_F_HI = 20000;
 
+/** Boxcar-average `db` in the linear-power domain over a ±fraction/2-octave window per bin, via prefix sums (O(n)). */
+function octaveSmooth(db: Float32Array, binHz: number, fraction: number): Float32Array {
+  const n = db.length;
+  const prefix = new Float64Array(n + 1);
+  for (let i = 0; i < n; i++) {
+    const lin = db[i] === -Infinity ? 0 : Math.pow(10, db[i] / 10);
+    prefix[i + 1] = prefix[i] + lin;
+  }
+  const out = new Float32Array(n);
+  const mul = Math.pow(2, fraction / 2);
+  for (let i = 1; i < n; i++) {
+    const f = i * binHz;
+    const i0 = Math.max(1, Math.round(f / mul / binHz));
+    const i1 = Math.min(n - 1, Math.max(i0, Math.round((f * mul) / binHz)));
+    const avg = (prefix[i1 + 1] - prefix[i0]) / (i1 - i0 + 1);
+    out[i] = avg > 0 ? 10 * Math.log10(avg) : -100;
+  }
+  return out;
+}
+
 export function SpectrumBody({ mix, ref }: BodyProps) {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
-  // Held frames: last non-silent analyser reading per track (dB arrays).
+  // Time-smoothed (EMA) dB frames per track — the analyser's own smoothing is
+  // disabled so this can be controlled precisely in milliseconds.
   const heldA = useRef<Float32Array | null>(null);
   const heldB = useRef<Float32Array | null>(null);
 
@@ -92,19 +113,40 @@ export function SpectrumBody({ mix, ref }: BodyProps) {
       getComputedStyle(document.documentElement).getPropertyValue(n).trim();
     const sr = audioTap.sampleRate();
     let raf = 0;
+    let lastT = performance.now();
 
-    const read = (role: "mix" | "reference", held: typeof heldA) => {
+    const read = (role: "mix" | "reference", held: typeof heldA, alpha: number) => {
+      // While paused the source is disconnected and the analyser decays toward
+      // silence over a few frames — stop sampling so the held frame stays
+      // exactly what was on screen at the moment of pause.
+      if (!audioTap.playing()) return held.current;
       const an = audioTap.analyser(role);
       if (!an) return held.current;
-      const buf = new Float32Array(an.frequencyBinCount);
-      an.getFloatFrequencyData(buf); // dB, −Infinity when silent
-      let peak = -Infinity;
-      for (let i = 0; i < buf.length; i++) if (buf[i] > peak) peak = buf[i];
-      if (peak > -100) held.current = buf; // only overwrite on real signal (hold-on-pause)
+      const raw = new Float32Array(an.frequencyBinCount);
+      an.getFloatFrequencyData(raw); // dB, −Infinity when silent
+      if (!held.current || held.current.length !== raw.length) {
+        held.current = new Float32Array(raw.length).fill(-100);
+      }
+      const smoothed = held.current;
+      for (let i = 0; i < raw.length; i++) {
+        // Guard against -Infinity/NaN on both sides so one bad frame can
+        // never permanently poison the running average.
+        const r = Number.isFinite(raw[i]) ? raw[i] : -100;
+        const cur = Number.isFinite(smoothed[i]) ? smoothed[i] : -100;
+        smoothed[i] = cur + alpha * (r - cur);
+      }
       return held.current;
     };
 
     const draw = () => {
+      const now = performance.now();
+      const dt = Math.max(0, (now - lastT) / 1000);
+      lastT = now;
+      const { spectrumAvgMs = 300, spectrumOctaves = "1/3" } = useViewState.getState();
+      const tau = Math.max(0.001, spectrumAvgMs / 1000);
+      const alpha = 1 - Math.exp(-dt / tau);
+      const [octNum, octDen] = spectrumOctaves.split("/").map(Number);
+      const octaveFraction = octDen ? octNum / octDen : octNum;
       const r = canvas.getBoundingClientRect();
       const dpr = Math.min(2, window.devicePixelRatio || 1);
       const w = Math.max(1, Math.round(r.width)), h = Math.max(1, Math.round(r.height));
@@ -113,17 +155,26 @@ export function SpectrumBody({ mix, ref }: BodyProps) {
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
       ctx.clearRect(0, 0, w, h);
       const a = cssVar("--a"), b = cssVar("--b"), line = "rgba(255,255,255,0.06)", tx3 = cssVar("--tx-3");
-      const padL = 30, padB = 14, dbLo = -100, dbHi = -20;
-      const plotH = h - padB;
+      const padL = 30, padT = 10, padB = 14, dbLo = -100, dbHi = -20;
+      const plotH = h - padB - padT;
       const xOf = (f: number) =>
         padL + ((Math.log10(f) - Math.log10(SPEC_F_LO)) / (Math.log10(SPEC_F_HI) - Math.log10(SPEC_F_LO))) * (w - padL);
-      const yOf = (db: number) => plotH - ((Math.max(dbLo, Math.min(dbHi, db)) - dbLo) / (dbHi - dbLo)) * plotH;
+      const yOf = (db: number) => padT + plotH - ((Math.max(dbLo, Math.min(dbHi, db)) - dbLo) / (dbHi - dbLo)) * plotH;
       ctx.font = '9px "JetBrains Mono", monospace';
+      // y-axis dB gridlines + labels
+      ctx.textAlign = "right";
+      for (let db = dbHi; db >= dbLo; db -= 6) {
+        const y = yOf(db);
+        ctx.strokeStyle = line; ctx.beginPath(); ctx.moveTo(padL, y + 0.5); ctx.lineTo(w, y + 0.5); ctx.stroke();
+        ctx.fillStyle = tx3; ctx.fillText(`${db}`, padL - 4, y + 3);
+      }
+      ctx.textAlign = "left";
+      const plotBottom = padT + plotH;
       // x-axis baseline + major decade gridlines
-      ctx.strokeStyle = line; ctx.beginPath(); ctx.moveTo(padL, plotH + 0.5); ctx.lineTo(w, plotH + 0.5); ctx.stroke();
+      ctx.strokeStyle = line; ctx.beginPath(); ctx.moveTo(padL, plotBottom + 0.5); ctx.lineTo(w, plotBottom + 0.5); ctx.stroke();
       for (const f of [100, 1000, 10000]) {
         const x = xOf(f);
-        ctx.strokeStyle = line; ctx.beginPath(); ctx.moveTo(x + 0.5, 0); ctx.lineTo(x + 0.5, plotH); ctx.stroke();
+        ctx.strokeStyle = line; ctx.beginPath(); ctx.moveTo(x + 0.5, padT); ctx.lineTo(x + 0.5, plotBottom); ctx.stroke();
         ctx.fillStyle = tx3; ctx.fillText(f >= 1000 ? `${f / 1000}k` : `${f}`, x + 3, h - 3);
       }
       // minor gridlines between decades (20..90, 200..900, 2000..9000), labels on a subset only
@@ -134,7 +185,7 @@ export function SpectrumBody({ mix, ref }: BodyProps) {
           const f = decade * m;
           if (f < SPEC_F_LO || f >= SPEC_F_HI) continue;
           const x = xOf(f);
-          ctx.strokeStyle = minorLine; ctx.beginPath(); ctx.moveTo(x + 0.5, 0); ctx.lineTo(x + 0.5, plotH); ctx.stroke();
+          ctx.strokeStyle = minorLine; ctx.beginPath(); ctx.moveTo(x + 0.5, padT); ctx.lineTo(x + 0.5, plotBottom); ctx.stroke();
           if (labeled.has(f)) {
             ctx.fillStyle = tx3; ctx.fillText(f >= 1000 ? `${f / 1000}k` : `${f}`, x + 3, h - 3);
           }
@@ -154,8 +205,10 @@ export function SpectrumBody({ mix, ref }: BodyProps) {
         }
         ctx.strokeStyle = color; ctx.lineWidth = 1.4; ctx.lineJoin = "round"; ctx.stroke();
       };
-      live(read("mix", heldA), a, audioTap.analyser("mix"));
-      live(read("reference", heldB), b, audioTap.analyser("reference"));
+      const smoothFor = (frame: Float32Array | null) =>
+        frame ? octaveSmooth(frame, sr / (frame.length * 2), octaveFraction) : null;
+      live(smoothFor(read("mix", heldA, alpha)), a, audioTap.analyser("mix"));
+      live(smoothFor(read("reference", heldB, alpha)), b, audioTap.analyser("reference"));
       raf = requestAnimationFrame(draw);
     };
     raf = requestAnimationFrame(draw);
