@@ -2,14 +2,14 @@ from __future__ import annotations
 
 import json
 
-from app.analysis import decode, features, loudness, spectrum, waveform
+from app.analysis import decode, features, loudness, spatial, spectrum, waveform
 from app.config import get_settings
 from app.db.base import SessionLocal
 from app.db.models import Comparison, Job, Track
 from app.storage.local import get_storage
 
 P0_STAGES = ["decode", "gainmatch", "waveform"]
-ALL_STAGES = ["decode", "gainmatch", "loudness", "frequency", "waveform"]
+ALL_STAGES = ["decode", "gainmatch", "loudness", "frequency", "spatial", "waveform"]
 
 
 def _set_stage(db, job: Job, role: str, stage: str, status: str) -> None:
@@ -24,9 +24,9 @@ def _set_stage(db, job: Job, role: str, stage: str, status: str) -> None:
     db.commit()
 
 
-def _pack_payload(track: Track, fileinfo, meta_dur, integrated, offset, peaks, sub1, sub2) -> bytes:
-    features = {**sub1["features"], **sub2["features"]}
-    static = {**sub1["static"], **sub2["static"]}
+def _pack_payload(track: Track, fileinfo, meta_dur, integrated, offset, peaks, sub1, sub2, sub3) -> bytes:
+    features = {**sub1["features"], **sub2["features"], **sub3["features"]}
+    static = {**sub1["static"], **sub2["static"], **sub3["static"]}
     payload = {
         "track": "user" if track.role == "mix" else "reference",
         "role": track.role,
@@ -101,10 +101,17 @@ def run_analysis(comp_id: str) -> None:
             )
             _set_stage(db, job, tr.role, "frequency", "done")
 
+            current_stage = "spatial"
+            _set_stage(db, job, tr.role, "spatial", "running")
+            sub3 = spatial.compute_substrate3(
+                pcm, settings.analysis_sample_rate, hop_s=0.1
+            )
+            _set_stage(db, job, tr.role, "spatial", "done")
+
             current_stage = "waveform"
             _set_stage(db, job, tr.role, "waveform", "running")
             peaks = waveform.build_peaks(pcm)
-            payload = _pack_payload(tr, info, dur, integ, offset, peaks, sub1, sub2)
+            payload = _pack_payload(tr, info, dur, integ, offset, peaks, sub1, sub2, sub3)
             key = f"payloads/{comp.id}/{tr.role}.json"
             storage.save(key, payload)
             tr.payload_key = key
