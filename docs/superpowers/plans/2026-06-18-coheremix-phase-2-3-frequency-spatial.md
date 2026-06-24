@@ -766,16 +766,10 @@ git commit -m "feat(panels): band-energy delta bars"
 
 - [ ] **Step 1: Add `SpectrumBody`**
 
-In `frontend/src/features/panels/bodies.tsx`, add the React import and the `audioTap` import at the top:
+In `frontend/src/features/panels/bodies.tsx`, add these imports at the top of the file (alongside the existing imports):
 
 ```typescript
 import { useEffect, useRef } from "react";
-import { audioTap } from "../audio/engine"; // placeholder — corrected below
-```
-
-Use the correct tap import instead:
-
-```typescript
 import { audioTap } from "../audio/tap";
 ```
 
@@ -864,8 +858,6 @@ export function SpectrumBody({ mix, ref }: BodyProps) {
   return <canvas ref={canvasRef} style={{ width: "100%", height: "100%", display: "block" }} />;
 }
 ```
-
-> Note: the placeholder import line shown first in Step 1 is wrong on purpose to highlight the correct one — ensure the file imports `audioTap` from `"../audio/tap"` only.
 
 - [ ] **Step 2: Register the live-spectrum view**
 

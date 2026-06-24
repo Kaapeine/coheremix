@@ -20,6 +20,7 @@ const ICONS: Record<string, string> = {
   dots:     "M10 4.5h.01M10 10h.01M10 15.5h.01",
   upload:   "M12 16V5M12 5l-4 4M12 5l4 4M5 16v2a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-2",
   spinner:  "M8 2a6 6 0 1 1-6 6",
+  refresh:  "M16 8a6 6 0 1 0-1.8 4.2M16 8v-4M16 8h-4",
 };
 
 export type IconName = keyof typeof ICONS;

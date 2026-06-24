@@ -3,7 +3,6 @@ import { Icon } from "../../components/Icon";
 import { Menu } from "../../components/Menu";
 import { api } from "../../api/client";
 import type { TrackPayload } from "../../types/payload";
-import { useViewState } from "../../store/viewState";
 
 function HeaderChip({
   payload,
@@ -49,8 +48,6 @@ interface Props {
 
 export function Header({ compId, mixPayload, refPayload, onSwapped }: Props) {
   const navigate = useNavigate();
-  const offsetB = useViewState((s) => s.offsetB);
-
   const dLufs =
     mixPayload && refPayload
       ? mixPayload.gainMatch.integratedLUFS -
@@ -72,16 +69,6 @@ export function Header({ compId, mixPayload, refPayload, onSwapped }: Props) {
 
       {/* readout pills */}
       <div className="hdr-readouts">
-        <div
-          className="offset-pill"
-          title="Alignment offset — drag the B waveform to change"
-        >
-          <span className="ol">offset B</span>
-          <span className="ov mono">
-            {offsetB >= 0 ? "+" : ""}
-            {offsetB.toFixed(2)}s
-          </span>
-        </div>
         <div
           className="offset-pill"
           title="Raw integrated-loudness difference (not corrected away)"

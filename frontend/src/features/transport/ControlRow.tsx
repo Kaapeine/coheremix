@@ -16,6 +16,7 @@ interface Props {
 export function ControlRow({ playing, setPlaying, onRestart }: Props) {
   const loop = useViewState((s) => s.loop);
   const locked = useViewState((s) => s.locked);
+  const offsetB = useViewState((s) => s.offsetB);
   const playhead = useViewState((s) => s.playhead);
   const duration = useViewState((s) => s.duration);
   const set = useViewState((s) => s.set);
@@ -81,6 +82,26 @@ export function ControlRow({ playing, setPlaying, onRestart }: Props) {
       </div>
 
       <div style={{ flex: 1 }} />
+
+      {/* offset readout */}
+      <div
+        className="offset-pill"
+        title="Alignment offset — drag the B waveform to change"
+      >
+        <span className="ol">offset B</span>
+        <span className="ov ov-offset mono">
+          {offsetB >= 0 ? "+" : ""}
+          {offsetB.toFixed(2)}s
+        </span>
+        <button
+          className="pill-reset"
+          onClick={() => set({ offsetB: 0 })}
+          disabled={offsetB === 0}
+          title="Reset offset to 0"
+        >
+          <Icon name="refresh" size={12} />
+        </button>
+      </div>
 
       {/* lock toggle */}
       <button
