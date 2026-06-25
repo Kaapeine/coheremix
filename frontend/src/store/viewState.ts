@@ -28,7 +28,7 @@ export interface ViewState {
   spectrumOctaves: OctaveFraction;
 }
 
-const DEFAULT: ViewState = {
+export const DEFAULT: ViewState = {
   secPerPx: 0.062,
   scroll: 0,
   offsetB: 0,

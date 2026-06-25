@@ -415,6 +415,7 @@ export function TilesBody({ mix, ref }: BodyProps) {
         {tile("True peak", tpA, tpB, (v) => v.toFixed(1), "dB")}
         {tile("Crest", crA, crB, (v) => v.toFixed(1), "dB")}
       </div>
+      <div style={{ height: 1, background: "var(--line)" }} />
     </div>
   );
 }
@@ -467,7 +468,7 @@ export function SummaryBody({ mix, ref }: BodyProps) {
   ];
   return (
     <div style={{ flex: 1 }}>
-      <div className="tile-grid">
+      <div className="tile-grid" style={{ gridTemplateColumns: "repeat(3, 1fr)" }}>
         {rows.map(([l, a, b, u]) => (
           <div className="tile" key={l}>
             <span className="tile-l">{l}</span>
@@ -479,6 +480,7 @@ export function SummaryBody({ mix, ref }: BodyProps) {
           </div>
         ))}
       </div>
+      <div style={{ height: 1, background: "var(--line)" }} />
     </div>
   );
 }

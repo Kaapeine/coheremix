@@ -1,6 +1,6 @@
 import React, { useEffect, useLayoutEffect, useRef, useState } from "react";
 import type { TrackPayload } from "../../types/payload";
-import { useViewState } from "../../store/viewState";
+import { DEFAULT, useViewState } from "../../store/viewState";
 import { Icon } from "../../components/Icon";
 import { ABBlock } from "./ABBlock";
 import { ControlRow } from "./ControlRow";
@@ -66,12 +66,21 @@ export function Transport({ compId, mixPayload, refPayload }: Props) {
     setPlaying(v);
   };
 
-  // Sync duration into store once on mount / when payloads change.
+  // Sync duration into store once on mount / when payloads change. Also fits
+  // the initial zoom to the mix track's full length — but only while secPerPx
+  // is still untouched (the hardcoded DEFAULT), so a user's own zoom (or a
+  // previously-saved fit) is never overridden on reload.
   useEffect(() => {
-    if (storeRef.current.duration !== duration) {
-      storeRef.current.set({ duration });
+    const s = storeRef.current;
+    if (s.duration !== duration) {
+      s.set({ duration });
     }
-  }, [duration]);
+    const w = waveRef.current?.clientWidth;
+    if (s.secPerPx === DEFAULT.secPerPx && w && mixPayload.meta.duration > 0) {
+      const fit = Math.min(0.5, Math.max(0.004, mixPayload.meta.duration / w));
+      s.set({ secPerPx: fit });
+    }
+  }, [duration, mixPayload.meta.duration]);
 
   // Track wave-stack width for auto-follow.
   useEffect(() => {

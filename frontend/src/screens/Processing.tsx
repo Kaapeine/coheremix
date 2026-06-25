@@ -7,13 +7,12 @@ const STAGE_LABELS: Record<string, string> = {
   decode: "Decode",
   gainmatch: "Gain-match",
   loudness: "Loudness",
-  waveform: "Waveform",
-  stft: "Frequency",
+  frequency: "Frequency",
   spatial: "Stereo",
-  aggregates: "Aggregates",
+  waveform: "Waveform",
 };
 
-const STAGE_ORDER = ["decode", "gainmatch", "loudness", "waveform", "stft", "spatial", "aggregates"];
+const STAGE_ORDER = ["decode", "gainmatch", "loudness", "frequency", "spatial", "waveform"];
 
 function ProcTrack({
   role,
