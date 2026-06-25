@@ -166,7 +166,7 @@ function boxPass(lin: Float64Array, binHz: number, fraction: number): Float64Arr
  */
 function octaveSmooth(db: Float32Array, binHz: number, fraction: number): Float32Array {
   const n = db.length;
-  let lin = new Float64Array(n);
+  let lin: Float64Array<ArrayBufferLike> = new Float64Array(n);
   for (let i = 0; i < n; i++) lin[i] = db[i] === -Infinity ? 0 : Math.pow(10, db[i] / 10);
   const passes = 3;
   const passFraction = fraction / Math.sqrt(passes);
