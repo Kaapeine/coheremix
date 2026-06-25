@@ -5,7 +5,8 @@ export interface EngineLoad {
 
 interface Voice {
   buffer: AudioBuffer;
-  gain: GainNode;
+  matchGain: GainNode;             // always-on loudness-match offset; analyser/splitter tap here
+  muteGain: GainNode;               // A/B mute (0 for the inaudible voice); feeds ctx.destination
   src: AudioBufferSourceNode | null;
   analyser: AnalyserNode;          // mono, for the live spectrum
   splitter: ChannelSplitterNode;   // → L/R analysers for the goniometer
@@ -50,9 +51,12 @@ export class AudioEngine {
     ]);
     const mkVoice = (buffer: AudioBuffer): Voice => {
       const ctx = this.ctx!;
-      const gain = ctx.createGain();
-      gain.connect(ctx.destination);
-      gain.gain.value = 0;
+      const matchGain = ctx.createGain();
+      matchGain.gain.value = 1;
+      const muteGain = ctx.createGain();
+      muteGain.gain.value = 0;
+      matchGain.connect(muteGain);
+      muteGain.connect(ctx.destination);
       const analyser = ctx.createAnalyser();
       analyser.fftSize = 8192;
       // Time smoothing is done in JS (SpectrumBody) for ms-accurate, frame-rate-independent control.
@@ -64,7 +68,12 @@ export class AudioEngine {
       analyserR.fftSize = 2048;
       splitter.connect(analyserL, 0);
       splitter.connect(analyserR, 1);
-      return { buffer, gain, src: null, analyser, splitter, analyserL, analyserR };
+      // Tap post-match so the spectrum/goniometer reflect the loudness-matched
+      // level, but pre-mute so both voices keep showing even though only one
+      // is audible at a time.
+      matchGain.connect(analyser);
+      matchGain.connect(splitter);
+      return { buffer, matchGain, muteGain, src: null, analyser, splitter, analyserL, analyserR };
     };
     this.mix = mkVoice(mixBuf);
     this.ref = mkVoice(refBuf);
@@ -119,10 +128,10 @@ export class AudioEngine {
 
   private applyGains() {
     if (!this.mix || !this.ref) return;
-    const mg = this.matchOn ? this.mixGainLin : 1;
-    const rg = this.matchOn ? this.refGainLin : 1;
-    this.mix.gain.gain.value = this.ab === "A" ? mg : 0;
-    this.ref.gain.gain.value = this.ab === "B" ? rg : 0;
+    this.mix.matchGain.gain.value = this.matchOn ? this.mixGainLin : 1;
+    this.ref.matchGain.gain.value = this.matchOn ? this.refGainLin : 1;
+    this.mix.muteGain.gain.value = this.ab === "A" ? 1 : 0;
+    this.ref.muteGain.gain.value = this.ab === "B" ? 1 : 0;
   }
 
   /** Current A-time. */
@@ -142,9 +151,7 @@ export class AudioEngine {
       if (at >= v.buffer.duration) return;
       const src = this.ctx!.createBufferSource();
       src.buffer = v.buffer;
-      src.connect(v.gain);
-      src.connect(v.analyser);
-      src.connect(v.splitter);
+      src.connect(v.matchGain);
       if (at >= 0) {
         src.start(now, at);
       } else {

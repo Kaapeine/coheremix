@@ -78,24 +78,101 @@ export function BandDeltaBody({ mix, ref }: BodyProps) {
 }
 
 const SPEC_F_LO = 20, SPEC_F_HI = 20000;
+// dB value the EMA self-heals to on a non-finite (digital-silence) reading —
+// distinct from the chart's axis floor so quiet-but-real content isn't confused with true silence.
+const SILENCE_DB = -100;
+// Cosmetic per-octave tilt so broadband/pink-ish material reads flat, matching
+// SPAN's ~4.5dB/octave slope convention. Anchored at 120Hz (the point that
+// already matched SPAN pre-correction) and clamped to never go negative, so
+// it only ever boosts the treble — it must not pull bass content down toward
+// the chart floor.
+const SLOPE_DB_PER_OCT = 4.5;
+const SLOPE_REF_HZ = 120;
+// Asymmetric ballistics: rise fast enough to catch transients, fall slowly so
+// the display stays readable — the "Averaging" knob governs only the release.
+const ATTACK_TAU_S = 0.05;
 
-/** Boxcar-average `db` in the linear-power domain over a ±fraction/2-octave window per bin, via prefix sums (O(n)). */
-function octaveSmooth(db: Float32Array, binHz: number, fraction: number): Float32Array {
-  const n = db.length;
-  const prefix = new Float64Array(n + 1);
-  for (let i = 0; i < n; i++) {
-    const lin = db[i] === -Infinity ? 0 : Math.pow(10, db[i] / 10);
-    prefix[i + 1] = prefix[i] + lin;
+/** Strokes a smooth Catmull-Rom spline through `points` (≥2) instead of straight segments. */
+function strokeSmoothPath(ctx: CanvasRenderingContext2D, points: { x: number; y: number }[]) {
+  if (points.length < 2) return;
+  ctx.beginPath();
+  ctx.moveTo(points[0].x, points[0].y);
+  if (points.length === 2) {
+    ctx.lineTo(points[1].x, points[1].y);
+  } else {
+    for (let i = 0; i < points.length - 1; i++) {
+      const p0 = points[Math.max(0, i - 1)];
+      const p1 = points[i];
+      const p2 = points[i + 1];
+      const p3 = points[Math.min(points.length - 1, i + 2)];
+      const cp1x = p1.x + (p2.x - p0.x) / 6, cp1y = p1.y + (p2.y - p0.y) / 6;
+      const cp2x = p2.x - (p3.x - p1.x) / 6, cp2y = p2.y - (p3.y - p1.y) / 6;
+      ctx.bezierCurveTo(cp1x, cp1y, cp2x, cp2y, p2.x, p2.y);
+    }
   }
-  const out = new Float32Array(n);
+  ctx.stroke();
+}
+
+/**
+ * Single fractional-octave box average pass over linear-power `lin`, ±fraction/2
+ * octaves wide per bin. Bin-edge contributions are weighted by their fractional
+ * overlap with the window (not rounded to the nearest bin), so the window's
+ * effective width varies continuously with frequency instead of jumping in
+ * integer-bin steps.
+ */
+function boxPass(lin: Float64Array, binHz: number, fraction: number): Float64Array {
+  const n = lin.length;
+  const prefix = new Float64Array(n + 1);
+  for (let i = 0; i < n; i++) prefix[i + 1] = prefix[i] + lin[i];
+  const out = new Float64Array(n);
   const mul = Math.pow(2, fraction / 2);
   for (let i = 1; i < n; i++) {
     const f = i * binHz;
-    const i0 = Math.max(1, Math.round(f / mul / binHz));
-    const i1 = Math.min(n - 1, Math.max(i0, Math.round((f * mul) / binHz)));
-    const avg = (prefix[i1 + 1] - prefix[i0]) / (i1 - i0 + 1);
-    out[i] = avg > 0 ? 10 * Math.log10(avg) : -100;
+    let loIdx = Math.max(0, f / mul / binHz);
+    let hiIdx = Math.min(n - 1, (f * mul) / binHz);
+    // Guarantee at least a ~1-bin-wide window even where the fractional-octave
+    // span is narrower than one bin (always true at low frequencies) — without
+    // this, those bins fall back to the raw, unsmoothed value and look stepped.
+    if (hiIdx - loIdx < 1) {
+      const mid = (loIdx + hiIdx) / 2;
+      loIdx = Math.max(0, mid - 0.5);
+      hiIdx = Math.min(n - 1, mid + 0.5);
+    }
+    if (hiIdx <= loIdx) {
+      out[i] = lin[i];
+      continue;
+    }
+    const i0 = Math.floor(loIdx), i1 = Math.floor(hiIdx);
+    if (i1 > i0) {
+      const wLo = i0 + 1 - loIdx, wHi = hiIdx - i1;
+      const sum = (prefix[i1] - prefix[i0 + 1]) + wLo * lin[i0] + wHi * lin[i1];
+      out[i] = sum / (i1 - i0 - 1 + wLo + wHi);
+    } else {
+      out[i] = lin[i0];
+    }
   }
+  return out;
+}
+
+/**
+ * Power-domain fractional-octave smoothing. A single box-average pass has a
+ * hard-edged rectangular window, which "smears" sharp harmonic peaks into flat
+ * plateaus with abrupt steps where the window edge crosses them — the blocky
+ * look. Running the same variable-width box pass three times approximates a
+ * Gaussian-weighted window (the same trick used for fast Gaussian blur in
+ * image processing), tapering gradually at the edges instead. Each pass widens
+ * the effective bandwidth, so the per-pass window is narrowed by sqrt(passes)
+ * to keep the net smoothing close to the requested `fraction`.
+ */
+function octaveSmooth(db: Float32Array, binHz: number, fraction: number): Float32Array {
+  const n = db.length;
+  let lin = new Float64Array(n);
+  for (let i = 0; i < n; i++) lin[i] = db[i] === -Infinity ? 0 : Math.pow(10, db[i] / 10);
+  const passes = 3;
+  const passFraction = fraction / Math.sqrt(passes);
+  for (let p = 0; p < passes; p++) lin = boxPass(lin, binHz, passFraction);
+  const out = new Float32Array(n);
+  for (let i = 1; i < n; i++) out[i] = lin[i] > 0 ? 10 * Math.log10(lin[i]) : -100;
   return out;
 }
 
@@ -115,7 +192,12 @@ export function SpectrumBody({ mix, ref }: BodyProps) {
     let raf = 0;
     let lastT = performance.now();
 
-    const read = (role: "mix" | "reference", held: typeof heldA, alpha: number) => {
+    const read = (
+      role: "mix" | "reference",
+      held: typeof heldA,
+      attackAlpha: number,
+      releaseAlpha: number,
+    ) => {
       // While paused the source is disconnected and the analyser decays toward
       // silence over a few frames — stop sampling so the held frame stays
       // exactly what was on screen at the moment of pause.
@@ -125,14 +207,15 @@ export function SpectrumBody({ mix, ref }: BodyProps) {
       const raw = new Float32Array(an.frequencyBinCount);
       an.getFloatFrequencyData(raw); // dB, −Infinity when silent
       if (!held.current || held.current.length !== raw.length) {
-        held.current = new Float32Array(raw.length).fill(-100);
+        held.current = new Float32Array(raw.length).fill(SILENCE_DB);
       }
       const smoothed = held.current;
       for (let i = 0; i < raw.length; i++) {
         // Guard against -Infinity/NaN on both sides so one bad frame can
         // never permanently poison the running average.
-        const r = Number.isFinite(raw[i]) ? raw[i] : -100;
-        const cur = Number.isFinite(smoothed[i]) ? smoothed[i] : -100;
+        const r = Number.isFinite(raw[i]) ? raw[i] : SILENCE_DB;
+        const cur = Number.isFinite(smoothed[i]) ? smoothed[i] : SILENCE_DB;
+        const alpha = r >= cur ? attackAlpha : releaseAlpha;
         smoothed[i] = cur + alpha * (r - cur);
       }
       return held.current;
@@ -142,9 +225,10 @@ export function SpectrumBody({ mix, ref }: BodyProps) {
       const now = performance.now();
       const dt = Math.max(0, (now - lastT) / 1000);
       lastT = now;
-      const { spectrumAvgMs = 300, spectrumOctaves = "1/3" } = useViewState.getState();
-      const tau = Math.max(0.001, spectrumAvgMs / 1000);
-      const alpha = 1 - Math.exp(-dt / tau);
+      const { spectrumAvgMs = 300, spectrumOctaves = "1/24" } = useViewState.getState();
+      const releaseTau = Math.max(0.001, spectrumAvgMs / 1000);
+      const releaseAlpha = 1 - Math.exp(-dt / releaseTau);
+      const attackAlpha = 1 - Math.exp(-dt / ATTACK_TAU_S);
       const [octNum, octDen] = spectrumOctaves.split("/").map(Number);
       const octaveFraction = octDen ? octNum / octDen : octNum;
       const r = canvas.getBoundingClientRect();
@@ -155,7 +239,7 @@ export function SpectrumBody({ mix, ref }: BodyProps) {
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
       ctx.clearRect(0, 0, w, h);
       const a = cssVar("--a"), b = cssVar("--b"), line = "rgba(255,255,255,0.06)", tx3 = cssVar("--tx-3");
-      const padL = 30, padT = 10, padB = 14, dbLo = -100, dbHi = -20;
+      const padL = 30, padT = 10, padB = 14, dbLo = -80, dbHi = -20;
       const plotH = h - padB - padT;
       const xOf = (f: number) =>
         padL + ((Math.log10(f) - Math.log10(SPEC_F_LO)) / (Math.log10(SPEC_F_HI) - Math.log10(SPEC_F_LO))) * (w - padL);
@@ -196,19 +280,27 @@ export function SpectrumBody({ mix, ref }: BodyProps) {
       const live = (frame: Float32Array | null, color: string, an: AnalyserNode | null) => {
         if (!frame || !an) return;
         const bins = frame.length;
-        ctx.beginPath(); let started = false;
+        const binHz = sr / (bins * 2);
+        const smoothed = octaveSmooth(frame, binHz, octaveFraction);
+        ctx.strokeStyle = color; ctx.lineWidth = 1.4; ctx.lineJoin = "round";
+        let points: { x: number; y: number }[] = [];
         for (let i = 1; i < bins; i++) {
-          const f = (i * sr) / (bins * 2);
+          const f = i * binHz;
           if (f < SPEC_F_LO || f > SPEC_F_HI) continue;
-          const x = xOf(f), y = yOf(frame[i]);
-          if (!started) { ctx.moveTo(x, y); started = true; } else ctx.lineTo(x, y);
+          const db = smoothed[i] + Math.max(0, SLOPE_DB_PER_OCT * Math.log2(f / SLOPE_REF_HZ));
+          // Below the chart's own floor — break the curve instead of dragging
+          // it flat along the bottom.
+          if (db <= dbLo) {
+            strokeSmoothPath(ctx, points);
+            points = [];
+            continue;
+          }
+          points.push({ x: xOf(f), y: yOf(db) });
         }
-        ctx.strokeStyle = color; ctx.lineWidth = 1.4; ctx.lineJoin = "round"; ctx.stroke();
+        strokeSmoothPath(ctx, points);
       };
-      const smoothFor = (frame: Float32Array | null) =>
-        frame ? octaveSmooth(frame, sr / (frame.length * 2), octaveFraction) : null;
-      live(smoothFor(read("mix", heldA, alpha)), a, audioTap.analyser("mix"));
-      live(smoothFor(read("reference", heldB, alpha)), b, audioTap.analyser("reference"));
+      live(read("mix", heldA, attackAlpha, releaseAlpha), a, audioTap.analyser("mix"));
+      live(read("reference", heldB, attackAlpha, releaseAlpha), b, audioTap.analyser("reference"));
       raf = requestAnimationFrame(draw);
     };
     raf = requestAnimationFrame(draw);

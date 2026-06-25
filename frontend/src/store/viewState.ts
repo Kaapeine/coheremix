@@ -3,7 +3,9 @@ import { api } from "../api/client";
 
 export type MatchMode = "integrated" | "shortterm" | "region" | "off";
 export type ViewMode = "overlaid" | "sideBySide";
-export const OCTAVE_FRACTIONS = ["1/6", "1/5", "1/4", "1/3", "1/2", "2/3", "3/4", "1"] as const;
+// Deliberately fine-grained — power-averaging a wide band dilutes real peaks,
+// so the useful range tops out well below the ANSI-standard 1/3 octave.
+export const OCTAVE_FRACTIONS = ["1/48", "1/24", "1/12", "1/6", "1/3"] as const;
 export type OctaveFraction = (typeof OCTAVE_FRACTIONS)[number];
 
 export interface ViewState {
@@ -43,7 +45,7 @@ const DEFAULT: ViewState = {
   panels: ["shortTermLufs", "ltas", "tiles"],
   meterSlots: ["lufs", "truepeak"],
   spectrumAvgMs: 300,
-  spectrumOctaves: "1/3",
+  spectrumOctaves: "1/24",
 };
 
 const lsKey = (id: string) => `coheremix:vs:${id}`;

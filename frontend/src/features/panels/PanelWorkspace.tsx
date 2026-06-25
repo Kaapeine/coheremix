@@ -88,7 +88,7 @@ function SpectrumSettings() {
         min={OCTAVE_VALUES[0]}
         max={OCTAVE_VALUES[OCTAVE_VALUES.length - 1]}
         steps={OCTAVE_VALUES}
-        defaultValue={OCTAVE_VALUES[OCTAVE_FRACTIONS.indexOf("1/3")]}
+        defaultValue={OCTAVE_VALUES[OCTAVE_FRACTIONS.indexOf("1/24")]}
         label="Smoothing"
         format={(v) => `${OCTAVE_FRACTIONS[OCTAVE_VALUES.indexOf(v)]} oct`}
         onChange={(v) => {
