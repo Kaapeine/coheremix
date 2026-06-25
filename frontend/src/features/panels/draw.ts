@@ -233,6 +233,73 @@ export function bandDelta(canvas: HTMLCanvasElement, A: TrackPayload, B: TrackPa
   ctx.textAlign = "left";
 }
 
+function decodeSpecData(b64: string): Uint8Array {
+  const bin = atob(b64);
+  const arr = new Uint8Array(bin.length);
+  for (let i = 0; i < bin.length; i++) arr[i] = bin.charCodeAt(i);
+  return arr;
+}
+
+const _specCache = new WeakMap<TrackPayload, HTMLCanvasElement>();
+
+/** Renders a track's spectrogram payload to an offscreen bitmap (magma-ish
+ * ramp), cached per track since the underlying data never changes. */
+function spectrogramBitmap(track: TrackPayload): HTMLCanvasElement | null {
+  const spec = track.spectrogram;
+  if (!spec) return null;
+  const cached = _specCache.get(track);
+  if (cached) return cached;
+  const { bins, cols, data: b64 } = spec;
+  const data = decodeSpecData(b64);
+  const off = document.createElement("canvas");
+  off.width = cols; off.height = bins;
+  const ictx = off.getContext("2d")!;
+  const img = ictx.createImageData(cols, bins);
+  for (let bI = 0; bI < bins; bI++) {
+    for (let c = 0; c < cols; c++) {
+      const v = data[bI * cols + c] / 255;
+      const r = Math.min(255, v * 320);
+      const g = Math.min(255, Math.max(0, (v - 0.25) * 300));
+      const bl = Math.min(255, 40 + v * 120 * (1 - v));
+      const di = ((bins - 1 - bI) * cols + c) * 4; // low freq at the bottom row
+      img.data[di] = r; img.data[di + 1] = g; img.data[di + 2] = bl; img.data[di + 3] = 255;
+    }
+  }
+  ictx.putImageData(img, 0, 0);
+  _specCache.set(track, off);
+  return off;
+}
+
+/** Spectrogram: A-row over B-row, each a time-scrolling crop of its
+ * pre-computed log-freq heatmap bitmap. */
+export function spectrogram(canvas: HTMLCanvasElement, A: TrackPayload, B: TrackPayload, view: View) {
+  const s = setup(canvas); if (!s.ok) return; const { ctx, w, h } = s;
+  const a = css("--a"), b = css("--b"), line = "rgba(255,255,255,0.10)", tx3 = css("--tx-3");
+  const padL = GUTTER;
+  const tm = timeMap(view, w, padL);
+  const rowH = (h - 1) / 2;
+  const drawRow = (track: TrackPayload, off: number, y: number, color: string, label: string) => {
+    ctx.fillStyle = "#000"; ctx.fillRect(padL, y, w - padL, rowH);
+    const bmp = spectrogramBitmap(track);
+    const dur = track.meta.duration;
+    if (bmp && dur > 0) {
+      const tL = Math.max(0, tm.tOf(padL) + off), tR = Math.min(dur, tm.tOf(w) + off);
+      if (tR > tL) {
+        const sx = (tL / dur) * bmp.width, sw = ((tR - tL) / dur) * bmp.width;
+        const dxL = tm.xOf(tL - off), dxR = tm.xOf(tR - off);
+        ctx.imageSmoothingEnabled = true;
+        ctx.drawImage(bmp, sx, 0, sw, bmp.height, dxL, y, dxR - dxL, rowH);
+      }
+    }
+    ctx.fillStyle = color; ctx.font = '9px "JetBrains Mono", monospace';
+    ctx.fillText(label, padL + 4, y + 12);
+  };
+  drawRow(A, 0, 0, a, "A · mix");
+  ctx.fillStyle = line; ctx.fillRect(padL, rowH, w - padL, 1);
+  drawRow(B, -view.offsetB, rowH + 1, b, "B · ref");
+  gridTime(ctx, w, h, tm, padL, line, tx3);
+}
+
 /** Per-band width: paired A/B bars (height ∝ S/M ratio) across the 7 bands. */
 export function bandBars(canvas: HTMLCanvasElement, A: TrackPayload, B: TrackPayload) {
   const s = setup(canvas); if (!s.ok) return; const { ctx, w, h } = s;

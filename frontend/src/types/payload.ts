@@ -53,6 +53,14 @@ export interface StaticAggregates {
   widthPerBand?: number[]; // P3, 7 bands
 }
 
+/** Log-freq x time heatmap. `data` is base64-encoded uint8, row-major bins x cols
+ * (cell `[bin, col]` at `data[bin * cols + col]`), peak-normalised per track. */
+export interface Spectrogram {
+  bins: number;
+  cols: number;
+  data: string;
+}
+
 export interface TrackPayload {
   track: "user" | "reference";
   role: "mix" | "reference";
@@ -63,7 +71,7 @@ export interface TrackPayload {
   hop: number;
   features: Features;
   ltas: Ltas | null;
-  spectrogram: unknown | null;
+  spectrogram: Spectrogram | null;
   waveform: { peaksByZoom: Record<string, number[]> };
   static: StaticAggregates;
   kblocks: number[][]; // per-100ms [msqL, msqR]

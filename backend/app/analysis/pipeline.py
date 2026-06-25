@@ -41,7 +41,7 @@ def _pack_payload(track: Track, fileinfo, meta_dur, integrated, offset, peaks, s
         "hop": 0.1,
         "features": features,
         "ltas": sub2["ltas"],
-        "spectrogram": None,
+        "spectrogram": sub2["spectrogram"],
         "waveform": {"peaksByZoom": peaks},
         "static": static,
         "kblocks": sub1["kblocks"],

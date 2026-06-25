@@ -5,7 +5,7 @@ import { Knob } from "../../components/Knob";
 import { OCTAVE_FRACTIONS, useViewState } from "../../store/viewState";
 import type { TrackPayload } from "../../types/payload";
 import {
-  ShortTermLufsBody, CrestBody, TilesBody, SummaryBody, LtasBody, BandDeltaBody, SpectrumBody, CorrelationBody, StereoTilesBody, GoniometerBody, PlaceholderBody, TimeOverlay,
+  ShortTermLufsBody, CrestBody, TilesBody, SummaryBody, LtasBody, BandDeltaBody, SpectrumBody, CorrelationBody, StereoTilesBody, GoniometerBody, SpectrogramBody, PlaceholderBody, TimeOverlay,
 } from "./bodies";
 
 const VIEWS: Record<string, { title: string; sub: string; family: string; kind: string }> = {
@@ -17,14 +17,12 @@ const VIEWS: Record<string, { title: string; sub: string; family: string; kind: 
   correlation:   { title: "Phase correlation", sub: "mono-compatibility", family: "Stereo", kind: "time" },
   stereoTiles:   { title: "Side/Mid width", sub: "region ratio + per-band width", family: "Stereo", kind: "tiles" },
   goniometer:    { title: "Goniometer", sub: "real-time · A | B side-by-side", family: "Stereo", kind: "freq" },
-  spectrogram:   { title: "Spectrogram", sub: "A-row over B-row", family: "Spectrogram", kind: "soon" },
+  spectrogram:   { title: "Spectrogram", sub: "A-row over B-row", family: "Spectrogram", kind: "time" },
   tiles:         { title: "Region readout", sub: "matched aggregates", family: "Summary", kind: "tiles" },
   summary:       { title: "Static summary", sub: "whole-file aggregates", family: "Summary", kind: "summary" },
 };
 
-const PHASE_FOR: Record<string, string> = {
-  spectrogram: "Phase 5",
-};
+const PHASE_FOR: Record<string, string> = {};
 
 const FAMILY_ORDER = ["Loudness", "Frequency", "Stereo", "Spectrogram", "Summary"];
 
@@ -137,6 +135,8 @@ function Panel({ id, idx, count, mix, ref, onChange, onMove, onClose }: PanelPro
     body = <StereoTilesBody mix={mix} ref={ref} />;
   } else if (id === "goniometer") {
     body = <GoniometerBody />;
+  } else if (id === "spectrogram") {
+    body = <SpectrogramBody mix={mix} ref={ref} />;
   } else {
     body = <PlaceholderBody title={v.title} phase={PHASE_FOR[id] ?? "a later phase"} />;
   }

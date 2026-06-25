@@ -37,7 +37,7 @@ class TrackPayload(BaseModel):
     hop: float = 0.1
     features: dict[str, list[float]] = {}  # shortTermLUFS, momentaryLUFS, correlation, crest, truePeak, centroid, sideMidRatio
     ltas: dict | None = None               # {freqs, db, bins} — long-term average spectrum, pre-computed
-    spectrogram: dict | None = None        # {bins, cols, data} — uint8 heatmap, pre-computed; rendered as WebGL texture
+    spectrogram: dict | None = None        # {bins, cols, data} — log-freq x time uint8 heatmap, base64-encoded, pre-computed
     waveform: Waveform                     # mipmap pyramid: z256/z512/z1024/z2048/z4096 — renderer picks closest to canvas px width
     static: dict = {}                      # lra, integrated, truePeakMax, plr, avgCorrelation, crestAvg
 

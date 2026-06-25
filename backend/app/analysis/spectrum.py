@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import base64
+
 import numpy as np
 from scipy import signal
 
@@ -81,6 +83,43 @@ def ltas(
     }
 
 
+def spectrogram(
+    freqs: np.ndarray, frames: np.ndarray, bins: int = 96, cols: int = 600,
+    f_lo: float = _F_LO, f_hi: float = _F_HI, floor_db: float = -80.0,
+) -> dict:
+    """Time-frequency heatmap on the same log-freq grid as `ltas`, downsampled
+    to a fixed `cols` time columns regardless of track length. Per-track
+    peak-normalised to 0dB and clamped at `floor_db`, then mapped linearly to
+    a uint8 0..255 byte per (bin, col) cell, base64-encoded for JSON transport.
+    `data` is row-major bins x cols, matching the design handoff's layout."""
+    edges = np.geomspace(f_lo, f_hi, bins + 1)
+    centers = np.sqrt(edges[:-1] * edges[1:])
+    if frames.shape[0] == 0:
+        empty = np.zeros(bins * cols, dtype=np.uint8)
+        return {"bins": bins, "cols": cols, "data": base64.b64encode(empty.tobytes()).decode("ascii")}
+    pow_frames = frames ** 2
+    band_pow = np.empty((frames.shape[0], bins))
+    for i in range(bins):
+        sel = (freqs >= edges[i]) & (freqs < edges[i + 1])
+        if np.any(sel):
+            band_pow[:, i] = pow_frames[:, sel].mean(axis=1)
+        else:  # log band narrower than FFT resolution (low end): nearest bin
+            band_pow[:, i] = pow_frames[:, int(np.argmin(np.abs(freqs - centers[i])))]
+    n_frames = band_pow.shape[0]
+    bounds = np.linspace(0, n_frames, cols + 1).astype(int)
+    pooled = np.empty((cols, bins))
+    for c in range(cols):
+        lo, hi = bounds[c], max(bounds[c] + 1, bounds[c + 1])
+        pooled[c] = band_pow[lo:min(hi, n_frames)].mean(axis=0)
+    db = np.full((cols, bins), floor_db)
+    pos = pooled > 0
+    db[pos] = 10.0 * np.log10(pooled[pos])
+    db = np.clip(db - db.max(), floor_db, 0.0)
+    byte = ((db - floor_db) / -floor_db * 255.0).astype(np.uint8)
+    data = np.ascontiguousarray(byte.T)  # (bins, cols), row-major
+    return {"bins": bins, "cols": cols, "data": base64.b64encode(data.tobytes()).decode("ascii")}
+
+
 def centroid_series(
     freqs: np.ndarray, frames: np.ndarray, sample_rate: int,
     fft: int = _FFT, hop: int = _HOP, hop_s: float = 0.1,
@@ -119,6 +158,7 @@ def compute_substrate2(pcm: np.ndarray, sample_rate: int, hop_s: float = 0.1) ->
     whole-file centroid average. No per-frame centroid series is computed."""
     freqs, frames = stft_mag(pcm, sample_rate)
     lt = ltas(freqs, frames)
+    spec = spectrogram(freqs, frames)
     if frames.shape[0] > 0:
         denom = frames.sum(axis=1)
         cen = np.where(denom > 0, (frames * freqs).sum(axis=1) / denom, 0.0)
@@ -128,6 +168,7 @@ def compute_substrate2(pcm: np.ndarray, sample_rate: int, hop_s: float = 0.1) ->
         cen_avg = 0.0
     return {
         "ltas": lt,
+        "spectrogram": spec,
         "features": {},
         "static": {"centroidAvg": cen_avg, "tilt": spectral_tilt(lt)},
     }

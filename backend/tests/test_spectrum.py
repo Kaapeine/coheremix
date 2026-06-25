@@ -1,3 +1,5 @@
+import base64
+
 import numpy as np
 from app.analysis import spectrum
 
@@ -40,3 +42,20 @@ def test_compute_substrate2_payload_shape():
     assert out["features"] == {}
     for key in ("centroidAvg", "tilt"):
         assert key in out["static"]
+
+
+def test_spectrogram_shape_and_range():
+    sr = 48000
+    pcm = _sine(sr, 4.0, 1000.0, 0.5)
+    freqs, frames = spectrum.stft_mag(pcm, sr)
+    spec = spectrum.spectrogram(freqs, frames, bins=32, cols=20)
+    assert spec["bins"] == 32 and spec["cols"] == 20
+    data = np.frombuffer(base64.b64decode(spec["data"]), dtype=np.uint8)
+    assert data.shape == (32 * 20,)
+    assert data.max() == 255  # peak-normalised: loudest cell hits the ceiling
+
+
+def test_spectrogram_empty_track():
+    spec = spectrum.spectrogram(np.zeros(0), np.zeros((0, 0)), bins=8, cols=4)
+    data = np.frombuffer(base64.b64decode(spec["data"]), dtype=np.uint8)
+    assert data.shape == (32,) and data.max() == 0

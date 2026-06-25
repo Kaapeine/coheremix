@@ -99,6 +99,46 @@ export function TruePeakMeter({ mix, ref }: MeterProps) {
   );
 }
 
+/** Peak-to-short-term ratio at the playhead — momentary headroom (Bob Katz
+ * K-metering convention). Lower = more squashed/limited right now. */
+function psrAt(track: TrackPayload, t: number): number {
+  const peak = R.max(track, "truePeak", Math.max(0, t - 1), Math.max(0.1, t));
+  const st = R.winMean(track, "shortTermLUFS", t, 3);
+  return peak - st;
+}
+
+function psrZone(v: number): string {
+  return v < 6 ? "var(--warn)" : v < 9 ? "var(--a)" : "var(--good)";
+}
+
+export function PsrMeter({ mix, ref }: MeterProps) {
+  const { playhead, offsetB } = useViewState();
+  const a = psrAt(mix, playhead);
+  const b = psrAt(ref, playhead - offsetB);
+  const row = (label: string, v: number, cls: "a" | "b") => (
+    <div className="corr-row" key={label}>
+      <span className="lbl">
+        <span className="dot" style={{ background: `var(--${cls})` }} />
+        {label}
+        <span className="v" style={{ color: psrZone(v) }}>{v.toFixed(1)} dB</span>
+      </span>
+      <div className="psr-scale">
+        <div className="psr-fill" style={{ width: `${Math.max(0, Math.min(1, v / 16)) * 100}%`, background: psrZone(v) }} />
+        <div className="psr-tick" style={{ left: `${(6 / 16) * 100}%` }} />
+      </div>
+    </div>
+  );
+  return (
+    <div className="corr-meter">
+      <div className="meter-sublabel" style={{ marginBottom: -2 }}>
+        Peak-to-short-term ratio at playhead — lower = more squashed
+      </div>
+      {row("A · mix", a, "a")}
+      {row("B · ref", b, "b")}
+    </div>
+  );
+}
+
 export function MeterPlaceholder({ title, phase }: { title: string; phase: string }) {
   return (
     <div className="empty-slot" style={{ fontSize: 11, color: "var(--tx-3)" }}>

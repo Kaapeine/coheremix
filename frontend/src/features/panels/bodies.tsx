@@ -5,7 +5,7 @@ import { useEffect, useRef } from "react";
 import type { TrackPayload } from "../../types/payload";
 import { useViewState } from "../../store/viewState";
 import { useCanvasDraw } from "./useCanvasDraw";
-import { lufsLane, valueLane, ltasCurve, bandDelta, bandBars } from "./draw";
+import { lufsLane, valueLane, ltasCurve, bandDelta, bandBars, spectrogram } from "./draw";
 import { audioTap } from "../audio/tap";
 import * as R from "../analysis/read";
 
@@ -74,6 +74,15 @@ export function LtasBody({ mix, ref }: BodyProps) {
 
 export function BandDeltaBody({ mix, ref }: BodyProps) {
   const cref = useCanvasDraw((cv) => bandDelta(cv, mix, ref), [mix, ref]);
+  return <canvas ref={cref} style={{ width: "100%", height: "100%", display: "block" }} />;
+}
+
+export function SpectrogramBody({ mix, ref }: BodyProps) {
+  const { secPerPx, scroll, offsetB } = useViewState();
+  const cref = useCanvasDraw(
+    (cv) => spectrogram(cv, mix, ref, { secPerPx, scroll, offsetB, momentary: false }),
+    [secPerPx, scroll, offsetB, mix, ref],
+  );
   return <canvas ref={cref} style={{ width: "100%", height: "100%", display: "block" }} />;
 }
 

@@ -488,6 +488,11 @@ html, body {
 .corr-needle.a { background: var(--a); } .corr-needle.b { background: var(--b); }
 .corr-axis { display:flex; justify-content:space-between; font-size:8.5px; color:var(--tx-3); font-family:var(--mono); }
 
+/* PSR meter */
+.psr-scale { height: 12px; border-radius: 6px; position: relative; overflow: hidden; background: var(--surface-2); }
+.psr-fill { position: absolute; top: 0; bottom: 0; left: 0; border-radius: 6px; transition: width .1s linear; }
+.psr-tick { position: absolute; top: -2px; bottom: -2px; width: 2px; background: var(--tx-3); }
+
 /* goniometer */
 .gonio-wrap { display: grid; grid-template-columns: 1fr 1fr; grid-template-rows: minmax(0, 1fr); gap: 10px; flex: 1; min-height: 0; padding: 8px 10px; }
 .gonio-cell { position: relative; min-height: 0; display: flex; align-items: center; justify-content: center; background: var(--bg); border: 1px solid var(--line); border-radius: var(--radius-sm); overflow: hidden; }
