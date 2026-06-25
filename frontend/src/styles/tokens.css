@@ -124,14 +124,9 @@ html, body {
 }
 .brand { display: flex; align-items: center; gap: 9px; user-select: none; }
 .brand-mark {
-  width: 18px; height: 18px; border-radius: 3px;
-  background: linear-gradient(135deg, var(--a) 0 50%, var(--b) 50% 100%);
-  position: relative;
-}
-.brand-mark::after{
-  content:""; position:absolute; inset:0;
-  background: var(--surface-1);
-  clip-path: polygon(46% 0, 54% 0, 54% 100%, 46% 100%);
+  width: 20px; height: 20px; border-radius: 4px;
+  display: block;
+  flex-shrink: 0;
 }
 .brand-name {
   font-family: var(--serif);
