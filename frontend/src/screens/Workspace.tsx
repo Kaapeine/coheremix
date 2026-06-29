@@ -61,7 +61,7 @@ export function Workspace() {
     return (
       <ErrorScreen
         message="This comparison could not be found or loaded."
-        onBack={() => navigate("/")}
+        onBack={() => navigate("/library")}
       />
     );
   }
@@ -75,7 +75,7 @@ export function Workspace() {
     return (
       <ErrorScreen
         message={`Analysis failed${comp.error ? `: ${comp.error}` : "."}`}
-        onBack={() => navigate("/")}
+        onBack={() => navigate("/library")}
       />
     );
   }

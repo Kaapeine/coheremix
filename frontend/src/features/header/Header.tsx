@@ -105,7 +105,7 @@ export function Header({ compId, mixPayload, refPayload, onSwapped }: Props) {
             <HeaderChip
               payload={mixPayload}
               role="a"
-              onClick={() => navigate("/")}
+              onClick={() => navigate("/library")}
             />
             <button
               className="swap-btn"
@@ -117,7 +117,7 @@ export function Header({ compId, mixPayload, refPayload, onSwapped }: Props) {
             <HeaderChip
               payload={refPayload}
               role="b"
-              onClick={() => navigate("/")}
+              onClick={() => navigate("/library")}
             />
           </div>
           <div className="ctrl-divider" />
@@ -167,7 +167,7 @@ export function Header({ compId, mixPayload, refPayload, onSwapped }: Props) {
               className="menu-item"
               onClick={() => {
                 close();
-                navigate("/");
+                navigate("/library");
               }}
             >
               ← Back to library
