@@ -11,6 +11,8 @@ dependencies = [
     "numpy>=2.1",
     "scipy>=1.14",
     "pyloudnorm>=0.1.1",
+    "psycopg2-binary>=2.9.12",
+    "pydantic-settings>=2.14.2",
 ]
 
 [dependency-groups]

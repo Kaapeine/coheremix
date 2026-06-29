@@ -9,7 +9,7 @@ class Base(DeclarativeBase):
 
 
 engine = create_engine(
-    get_settings().db_url, connect_args={"check_same_thread": False}
+    get_settings().db_url, pool_pre_ping=True
 )
 SessionLocal = sessionmaker(bind=engine, autoflush=False, expire_on_commit=False)
 

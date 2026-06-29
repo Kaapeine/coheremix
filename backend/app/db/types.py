@@ -16,7 +16,7 @@ class UtcDateTime(TypeDecorator):
     strips tzinfo for storage; load re-attaches UTC.
     """
 
-    impl = DateTime
+    impl = DateTime(timezone=True)
     cache_ok = True
 
     def process_bind_param(self, value: datetime | None, dialect) -> datetime | None:
