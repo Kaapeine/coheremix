@@ -42,7 +42,7 @@ export const DEFAULT: ViewState = {
   target: -14,
   momentary: false,
   duration: 0,
-  panels: ["shortTermLufs", "ltas", "tiles"],
+  panels: ["liveSpectrum", "goniometer", "summary"],
   meterSlots: ["lufs", "truepeak"],
   spectrumAvgMs: 300,
   spectrumOctaves: "1/24",
