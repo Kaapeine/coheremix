@@ -7,7 +7,6 @@ docs
 backend/.venv
 backend/.pytest_cache
 backend/data
-backend/demo
 
 frontend/node_modules
 frontend/dist

@@ -409,8 +409,8 @@ export function TilesBody({ mix, ref }: BodyProps) {
     </div>
   );
   return (
-    <div style={{ flex: 1 }}>
-      <div className="tile-grid">
+    <div style={{ flex: 1, minHeight: 0, display: "flex", flexDirection: "column" }}>
+      <div className="tile-grid" style={{ flex: 1, minHeight: 0, gridAutoRows: "1fr" }}>
         {tile("Integrated LUFS", iA, iB, (v) => v.toFixed(1), "LU")}
         {tile("True peak", tpA, tpB, (v) => v.toFixed(1), "dB")}
         {tile("Crest", crA, crB, (v) => v.toFixed(1), "dB")}
@@ -467,8 +467,8 @@ export function SummaryBody({ mix, ref }: BodyProps) {
     ["Tilt", mix.static.tilt ?? 0, ref.static.tilt ?? 0, "dB/oct"],
   ];
   return (
-    <div style={{ flex: 1 }}>
-      <div className="tile-grid" style={{ gridTemplateColumns: "repeat(3, 1fr)" }}>
+    <div style={{ flex: 1, minHeight: 0, display: "flex", flexDirection: "column" }}>
+      <div className="tile-grid" style={{ gridTemplateColumns: "repeat(3, 1fr)", flex: 1, minHeight: 0, gridAutoRows: "1fr" }}>
         {rows.map(([l, a, b, u]) => (
           <div className="tile" key={l}>
             <span className="tile-l">{l}</span>
