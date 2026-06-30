@@ -5,7 +5,7 @@ from fastapi import FastAPI
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 
-from app.api import comparisons, jobs
+from app.api import comparisons, demo, jobs
 from app.cleanup import sweep_expired
 from app.db.base import init_db
 
@@ -23,6 +23,7 @@ app = FastAPI(title="CohereMix", lifespan=lifespan)
 
 app.include_router(comparisons.router)
 app.include_router(jobs.router)
+app.include_router(demo.router)
 
 
 @app.get("/api/health")

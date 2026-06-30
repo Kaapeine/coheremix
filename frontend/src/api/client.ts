@@ -40,6 +40,9 @@ export const api = {
   remove: (id: string): Promise<void> =>
     fetch(`/api/comparisons/${id}`, { method: "DELETE", credentials: "include" }).then(() => undefined),
 
+  demo: (): Promise<{ id: string; state: string }> =>
+    fetch("/api/demo", { credentials: "include" }).then(json),
+
   audio: (id: string, role: string): Promise<string> =>
     fetch(`/api/comparisons/${id}/tracks/${role}/audio`, { credentials: "include" })
       .then(json)

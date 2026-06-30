@@ -225,7 +225,6 @@ export function UploadModal({ onClose }: { onClose: () => void }) {
   const [probingA, setProbingA] = useState(false);
   const [probingB, setProbingB] = useState(false);
   const [analyzing, setAnalyzing] = useState(false);
-  const [demoLoading, setDemoLoading] = useState(false);
   const [analyzeError, setAnalyzeError] = useState<string | null>(null);
 
   const both = a !== null && b !== null;
@@ -266,36 +265,6 @@ export function UploadModal({ onClose }: { onClose: () => void }) {
         err instanceof Error ? err.message : "Upload failed — please try again",
       );
       setAnalyzing(false);
-    }
-  };
-
-  const handleDemoFiles = async () => {
-    setDemoLoading(true);
-    setErrorA(null);
-    setErrorB(null);
-    try {
-      const [mixBlob, refBlob] = await Promise.all([
-        fetch("/api/comparisons/demo/mix", { credentials: "include" }).then((r) => {
-          if (!r.ok) throw new Error("Demo mix not found");
-          return r.blob();
-        }),
-        fetch("/api/comparisons/demo/reference", { credentials: "include" }).then((r) => {
-          if (!r.ok) throw new Error("Demo reference not found");
-          return r.blob();
-        }),
-      ]);
-      const mixFile = new File([mixBlob], "mix_demo.wav", { type: "audio/wav" });
-      const refFile = new File([refBlob], "reference_demo.wav", {
-        type: "audio/wav",
-      });
-      await Promise.all([
-        handleFile(mixFile, setA, setErrorA, setProbingA),
-        handleFile(refFile, setB, setErrorB, setProbingB),
-      ]);
-    } catch (err) {
-      setErrorA(err instanceof Error ? err.message : "Could not load demo files");
-    } finally {
-      setDemoLoading(false);
     }
   };
 
@@ -400,15 +369,6 @@ export function UploadModal({ onClose }: { onClose: () => void }) {
                 : "Add both tracks to continue."}
           </span>
           <span style={{ flex: 1 }} />
-          {!both && !probingA && !probingB && (
-            <button
-              className="link-demo"
-              onClick={handleDemoFiles}
-              disabled={demoLoading}
-            >
-              {demoLoading ? "Loading…" : "Use demo files"}
-            </button>
-          )}
           <button className="btn-ghost" onClick={onClose}>
             Cancel
           </button>

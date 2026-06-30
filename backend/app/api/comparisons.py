@@ -109,13 +109,6 @@ def list_comparisons(
     return [_comp_out(c) for c in repo.list_comparisons(db, session_id)]
 
 
-@router.get("/demo/{which}")
-def demo_file(which: str):
-    p = get_settings().demo_dir / ("mix_demo.wav" if which == "mix" else "reference_demo.wav")
-    if not p.exists():
-        raise HTTPException(404, "Demo files not yet generated (run Task 16)")
-    return FileResponse(p, media_type="audio/wav", filename=p.name)
-
 
 @router.get("/{comp_id}")
 def get_comparison(comp_id: str, db: OrmSession = Depends(get_db)):

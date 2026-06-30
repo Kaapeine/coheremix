@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { api } from "../api/client";
 import { UploadModal } from "./UploadModal";
 
 function BrandMark({ size = 20 }: { size?: number }) {
@@ -63,6 +64,23 @@ const METRICS = [
 export function Landing() {
   const navigate = useNavigate();
   const [showUpload, setShowUpload] = useState(false);
+  const [demoLoading, setDemoLoading] = useState(false);
+
+  const handleDemo = async () => {
+    setDemoLoading(true);
+    try {
+      const poll = async (): Promise<string> => {
+        const { id, state } = await api.demo();
+        if (state === "ready") return id;
+        if (state === "failed") throw new Error("demo failed");
+        await new Promise((r) => setTimeout(r, 2000));
+        return poll();
+      };
+      navigate(`/c/${await poll()}`);
+    } catch {
+      setDemoLoading(false);
+    }
+  };
 
   return (
     <div style={{ height: "100%", display: "flex", flexDirection: "column", background: "var(--bg)" }}>
@@ -97,8 +115,8 @@ export function Landing() {
               <button className="btn-primary" onClick={() => setShowUpload(true)}>
                 New comparison
               </button>
-              <button className="btn-ghost" onClick={() => navigate("/library")}>
-                View sample
+              <button className="btn-ghost" onClick={handleDemo} disabled={demoLoading}>
+                {demoLoading ? "Loading sample…" : "View sample"}
               </button>
             </div>
           </div>
