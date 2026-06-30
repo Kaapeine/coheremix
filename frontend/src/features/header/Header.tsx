@@ -62,7 +62,7 @@ export function Header({ compId, mixPayload, refPayload, onSwapped }: Props) {
   return (
     <div className="header">
       {/* brand */}
-      <div className="brand">
+      <div className="brand" onClick={() => navigate("/")} style={{ cursor: "pointer" }}>
         <svg
           className="brand-mark"
           viewBox="0 0 128 128"

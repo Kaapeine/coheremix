@@ -6,7 +6,6 @@ from fastapi import APIRouter, Cookie, Depends, File, Form, HTTPException, Respo
 from fastapi.responses import FileResponse
 from sqlalchemy.orm import Session as OrmSession
 
-from app.analysis import decode
 from app.analysis.pipeline import run_analysis
 from app.api import get_db
 from app.config import get_settings
@@ -52,6 +51,7 @@ async def create_comparison(
     settings = get_settings()
     storage = get_storage()
 
+    from app.analysis import decode  # noqa: PLC0415
     saved_keys: list[str] = []
     try:
         tracks = []

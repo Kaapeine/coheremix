@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import json
 
-from app.analysis import decode, features, loudness, spatial, spectrum, waveform
 from app.config import get_settings
 from app.db.base import SessionLocal
 from app.db.models import Comparison, Job, Track
@@ -50,6 +49,7 @@ def _pack_payload(track: Track, fileinfo, meta_dur, integrated, offset, peaks, s
 
 
 def run_analysis(comp_id: str) -> None:
+    from app.analysis import decode, features, loudness, spatial, spectrum, waveform  # noqa: PLC0415
     db = SessionLocal()
     settings = get_settings()
     storage = get_storage()
