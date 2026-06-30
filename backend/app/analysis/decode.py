@@ -48,11 +48,7 @@ def probe(path: str, size: int) -> FileInfo:
 
 
 def decode_to_48k(path: str, target_sr: int | None = None) -> np.ndarray:
-    """Decode any supported file to float32 stereo PCM, shape (2, n).
-
-    Resamples to ``target_sr`` (defaults to ``analysis_sample_rate`` from
-    config, currently 48 kHz).
-    """
+    """Decode any supported file to float32 stereo PCM, shape (2, n)."""
     sr = target_sr if target_sr is not None else get_settings().analysis_sample_rate
     proc = subprocess.run(
         ["ffmpeg", "-v", "error", "-i", path,

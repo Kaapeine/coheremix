@@ -52,6 +52,11 @@ async def create_comparison(
     storage = get_storage()
 
     from app.analysis import decode  # noqa: PLC0415
+    from app.storage.local import LocalDiskStorage
+    local = LocalDiskStorage()
+    storage = get_storage()
+    use_r2 = storage is not local and hasattr(storage, "presign_url")
+
     saved_keys: list[str] = []
     try:
         tracks = []
@@ -62,7 +67,9 @@ async def create_comparison(
                     413, f"{role} file too large (max {settings.max_upload_bytes // 1024 // 1024} MB)"
                 )
             key = f"uploads/{uuid.uuid4().hex}-{up.filename}"
-            storage.save(key, data)
+            local.save(key, data)       # always write locally for pipeline
+            if use_r2:
+                storage.save(key, data) # also write to R2 for serving
             saved_keys.append(key)
 
             # Probe before queuing — authoritative duration + stereo gate
@@ -78,7 +85,9 @@ async def create_comparison(
             tracks.append({"role": role, "name": up.filename, "upload_key": key})
     except HTTPException:
         for k in saved_keys:
-            storage.delete(k)
+            local.delete(k)
+            if use_r2:
+                storage.delete(k)
         raise
 
     sess = repo.get_or_create_session(db, session_id)

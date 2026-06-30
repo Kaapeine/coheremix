@@ -132,4 +132,10 @@ def run_analysis(comp_id: str) -> None:
         job.error = str(exc)
         db.commit()
     finally:
+        if settings.r2_account_id:
+            # Local upload files are scratch copies for pipeline use only; R2 retains the originals.
+            from app.storage.local import LocalDiskStorage  # noqa: PLC0415
+            local = LocalDiskStorage()
+            for tr in comp.tracks:
+                local.delete(tr.upload_key)
         db.close()
