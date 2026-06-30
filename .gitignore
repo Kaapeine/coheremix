@@ -17,3 +17,5 @@ frontend/dist/
 # Design handoff (local reference only)
 docs/design_handoff_coheremix/
 docs/mix-comparison-tool-spec(2).md
+
+.env

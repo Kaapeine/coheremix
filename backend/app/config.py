@@ -11,6 +11,11 @@ class Settings(BaseSettings):
 
     data_dir: Path = DATA_DIR
     db_url: str = "postgresql://coheremix:coheremix@localhost:5432/coheremix"
+    r2_account_id: str | None = None
+    r2_access_key_id: str | None = None
+    r2_secret_access_key: str | None = None
+    r2_bucket: str | None = None
+    r2_presign_expires: int = 3600
     storage_dir: Path = DATA_DIR / "storage"
     demo_dir: Path = Path(__file__).resolve().parent.parent / "demo"
     target_lufs: float = -14.0

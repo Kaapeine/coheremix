@@ -41,11 +41,8 @@ export function useAudioEngine({ compId, mix, ref, playing, setPlaying }: Args):
     let cancelled = false;
     engineRef.current = engine;
     readyRef.current = false;
-    engine
-      .load({
-        mixUrl: api.audioUrl(compId, "mix"),
-        refUrl: api.audioUrl(compId, "reference"),
-      })
+    Promise.all([api.audio(compId, "mix"), api.audio(compId, "reference")])
+      .then(([mixUrl, refUrl]) => engine.load({ mixUrl, refUrl }))
       .then(() => {
         if (cancelled) return;
         engine.setGainMatch(

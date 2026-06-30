@@ -29,4 +29,8 @@ class LocalDiskStorage:
 
 
 def get_storage() -> LocalDiskStorage:
+    from app.config import get_settings
+    if get_settings().r2_account_id:
+        from app.storage.r2 import get_r2_storage
+        return get_r2_storage()  # type: ignore[return-value]
     return LocalDiskStorage()

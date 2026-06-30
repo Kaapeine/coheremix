@@ -82,7 +82,8 @@ export class AudioEngine {
   }
 
   private async fetchDecode(url: string): Promise<AudioBuffer> {
-    const res = await fetch(url, { credentials: "include", cache: "no-store" });
+    const sameOrigin = url.startsWith("/") || url.startsWith(window.location.origin);
+    const res = await fetch(url, { cache: "no-store", ...(sameOrigin && { credentials: "include" }) });
     if (!res.ok) throw new Error(`audio ${res.status}`);
     const bytes = await res.arrayBuffer();
     return await this.ctx!.decodeAudioData(bytes);

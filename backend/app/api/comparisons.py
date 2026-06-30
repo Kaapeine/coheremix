@@ -136,6 +136,20 @@ def get_audio(comp_id: str, role: str, db: OrmSession = Depends(get_db)):
     track = next((t for t in comp.tracks if t.role == role), None)
     if not track or not track.upload_key:
         raise HTTPException(404, "audio not available")
+    storage = get_storage()
+    if hasattr(storage, "presign_url"):
+        return {"url": storage.presign_url(track.upload_key)}
+    return {"url": f"/api/comparisons/{comp_id}/tracks/{role}/audio/bytes"}
+
+
+@router.get("/{comp_id}/tracks/{role}/audio/bytes")
+def get_audio_bytes(comp_id: str, role: str, db: OrmSession = Depends(get_db)):
+    comp = repo.get_comparison(db, comp_id)
+    if not comp:
+        raise HTTPException(404)
+    track = next((t for t in comp.tracks if t.role == role), None)
+    if not track or not track.upload_key:
+        raise HTTPException(404, "audio not available")
     path = get_settings().storage_dir / track.upload_key
     if not path.exists():
         raise HTTPException(410, "audio expired")

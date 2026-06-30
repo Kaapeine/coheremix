@@ -40,6 +40,8 @@ export const api = {
   remove: (id: string): Promise<void> =>
     fetch(`/api/comparisons/${id}`, { method: "DELETE", credentials: "include" }).then(() => undefined),
 
-  audioUrl: (id: string, role: string): string =>
-    `/api/comparisons/${id}/tracks/${role}/audio`,
+  audio: (id: string, role: string): Promise<string> =>
+    fetch(`/api/comparisons/${id}/tracks/${role}/audio`, { credentials: "include" })
+      .then(json)
+      .then((j: { url: string }) => j.url),
 };
